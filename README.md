@@ -106,17 +106,54 @@ docker compose up --build
 # 访问 http://localhost:8080
 ```
 
+### 本地开发需要 PostgreSQL
+
+项目使用 PostgreSQL（生产同构）。本地开发二选一：
+
+```bash
+# 方案 A：Docker 起本地 PG
+docker run -d --name minierp-pg -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=minierp -p 5432:5432 postgres:16-alpine
+
+# 方案 B：使用免费 Neon 云数据库（https://neon.tech），把连接串写入 server/.env
+```
+
+然后更新 `server/.env` 的 `DATABASE_URL` 为对应 PostgreSQL 连接串。
+
 ## 🔐 环境变量
 
 | 变量                | 位置        | 说明                                     |
 | ------------------- | ----------- | ---------------------------------------- |
 | `PORT`              | server/.env | API 端口，默认 3000                      |
 | `JWT_SECRET`        | server/.env | JWT 签名密钥，**生产必须替换为强随机串** |
-| `DATABASE_URL`      | server/.env | SQLite 连接串                            |
+| `DATABASE_URL`      | server/.env | PostgreSQL 连接串（生产/Neon 同构）      |
 | `CORS_ORIGINS`      | server/.env | CORS 白名单（逗号分隔）                  |
 | `VITE_API_BASE_URL` | web/.env    | 前端 API 地址（留空走 Vite 代理）        |
 
 模板见 `server/.env.example` 与 `web/.env.example`，复制为 `.env` 后填写（`.env` 已被 git 忽略）。
+
+## 🌐 部署上线（Render + Neon）
+
+后端 Express API 与前端静态站点均部署到 Render（免费），数据库用 Neon 免费 PostgreSQL。
+
+### 1. 创建数据库（Neon）
+
+1. 打开 https://neon.tech 注册登录，新建项目与数据库
+2. 复制 PostgreSQL 连接串（`postgresql://...?sslmode=require`）备用
+
+### 2. 一键部署（Render Blueprint）
+
+1. 打开 https://dashboard.render.com/blueprints ，选择本仓库（`QIUZI-HONG/MinSaasERP`）
+2. 填入环境变量后 Apply：
+   - 后端 `DATABASE_URL`：Neon 连接串
+   - 后端 `CORS_ORIGINS`：前端地址，如 `https://minierp-web.onrender.com`
+   - 前端 `VITE_API_BASE_URL`：后端地址，如 `https://minierp-api.onrender.com`
+3. 首次部署后，把实际生成的前端 URL 回填到后端 `CORS_ORIGINS` 并重新部署后端
+
+> 部署配置见根目录 `render.yaml`（Blueprint 即代码，可版本化）。
+
+### 3. 验收
+
+部署完成后访问前端地址，登录 `admin / admin123`，检查看板/下单/库存联动是否正常。
 
 ## 🧪 测试
 
@@ -176,6 +213,6 @@ Order（订单）1 ── n OrderItem（明细）n ── 1 Product（商品）
 
 ## ⚠️ 已知限制（演示定位）
 
-- SQLite 单文件数据库，高并发写有锁竞争；生产建议切换 PostgreSQL（仅改 Prisma datasource + 连接串）
 - 登录限流为内存实现，多实例部署需换 Redis
 - 未做分页/细粒度 RBAC/单元测试覆盖（架构已留扩展点）
+- 生产建表使用 `prisma db push`（开发便捷）；正式多环境应改用 `prisma migrate deploy` 管理迁移

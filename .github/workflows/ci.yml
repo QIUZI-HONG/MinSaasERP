@@ -36,6 +36,24 @@ jobs:
   api-tests:
     name: API / Security / Concurrency tests
     runs-on: ubuntu-latest
+    services:
+      # PostgreSQL 测试实例（生产同样使用 PostgreSQL）
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: minierp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # 覆盖 server/.env（dotenv 不覆盖已存在的环境变量）
+      DATABASE_URL: postgresql://test:test@localhost:5432/minierp?sslmode=disable
     steps:
       - uses: actions/checkout@v4
 
@@ -50,7 +68,7 @@ jobs:
       - name: Setup database
         working-directory: server
         run: |
-          npx prisma db push --accept-data-loss
+          npx prisma db push
           npm run db:seed
 
       - name: Start backend
@@ -79,6 +97,5 @@ jobs:
         run: npm run db:seed
 
 # 说明：
-# 1. UI E2E（ui.test.mjs）依赖本机 Chrome 路径，在 CI 中需配置浏览器，建议本地执行：
-#    npm run dev 后执行 npm run test:ui
+# 1. UI E2E（ui.test.mjs）依赖本机 Chrome 路径，建议本地执行：npm run dev 后执行 npm run test:ui
 # 2. api/security/stress 测试会写入数据库，请在测试后重置 seed（如上）

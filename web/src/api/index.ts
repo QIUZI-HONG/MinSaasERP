@@ -1,8 +1,11 @@
 // axios 封装：自动携带 token；401 时跳回登录页（登录接口自身的 401 除外）
+// baseURL：生产环境通过 VITE_API_BASE_URL 指向后端完整地址；开发环境留空走 Vite 代理 /api
 import axios from 'axios';
 import { auth, clearAuth } from '../store/auth';
 
-export const http = axios.create({ baseURL: '/api' });
+const baseURL: string = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api';
+
+export const http = axios.create({ baseURL });
 
 // 请求拦截：带上 JWT
 http.interceptors.request.use((config) => {
@@ -19,7 +22,7 @@ http.interceptors.request.use((config) => {
 http.interceptors.response.use(
   (res) => res,
   (err) => {
-    const isAuthRequest = String(err.config?.url || '').startsWith('/auth/');
+    const isAuthRequest = String(err.config?.url || '').includes('/auth/');
     if (err.response?.status === 401 && !isAuthRequest) {
       clearAuth();
       window.location.href = '/login';
