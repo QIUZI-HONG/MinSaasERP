@@ -1,0 +1,16 @@
+# 依赖与构建产物
+node_modules/
+dist/
+
+# 日志
+*.log
+npm-debug.log*
+
+# 本地数据库
+server/prisma/dev.db
+server/prisma/dev.db-journal
+
+# 编辑器
+.vscode/
+.idea/
+.DS_Store
