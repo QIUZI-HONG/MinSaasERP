@@ -115,7 +115,13 @@ async function onSave() {
   }
   saving.value = true;
   try {
-    const payload = { sku: form.sku, name: form.name, price: form.price, stock: form.stock, category: form.category };
+    const payload = {
+      sku: form.sku,
+      name: form.name,
+      price: form.price,
+      stock: form.stock,
+      category: form.category,
+    };
     if (form.id) {
       await api.updateProduct(form.id, payload);
       ElMessage.success('修改成功');

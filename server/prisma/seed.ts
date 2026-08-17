@@ -37,7 +37,13 @@ async function main() {
 
   // 4. 客户（显式指定 id，订单用 customerId 1~4 引用）
   const customerData = [
-    { id: 1, name: '深圳市蓝海贸易有限公司', contact: '王经理', phone: '13800000001', address: '深圳市南山区' },
+    {
+      id: 1,
+      name: '深圳市蓝海贸易有限公司',
+      contact: '王经理',
+      phone: '13800000001',
+      address: '深圳市南山区',
+    },
     { id: 2, name: '上海星河电商', contact: '李女士', phone: '13800000002', address: '上海市浦东新区' },
     { id: 3, name: '杭州云帆科技', contact: '张工', phone: '13800000003', address: '杭州市西湖区' },
     { id: 4, name: '广州南沙跨境供应链', contact: '陈总', phone: '13800000004', address: '广州市南沙区' },

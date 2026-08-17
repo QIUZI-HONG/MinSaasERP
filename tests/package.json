@@ -1,1 +1,17 @@
-{"name":"minierp-e2e-tests","private":true,"type":"module","dependencies":{"playwright-core":"^1.62.1"}}
+{
+  "name": "@minierp/tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MiniSaaS ERP 四层质量测试套件（API / 安全 / 并发 / Chrome E2E）",
+  "scripts": {
+    "test": "node api.test.mjs && node security.test.mjs && node stress.test.mjs",
+    "test:api": "node api.test.mjs",
+    "test:security": "node security.test.mjs",
+    "test:stress": "node stress.test.mjs",
+    "test:ui": "node ui.test.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.62.1"
+  }
+}

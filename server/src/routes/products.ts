@@ -7,7 +7,9 @@ const router = Router();
 // 商品列表（支持按名称/SKU 搜索）
 router.get('/', async (req, res, next) => {
   try {
-    const q = String(req.query.q || '').trim().slice(0, 100);
+    const q = String(req.query.q || '')
+      .trim()
+      .slice(0, 100);
     const list = await prisma.product.findMany({
       where: q ? { OR: [{ name: { contains: q } }, { sku: { contains: q } }] } : undefined,
       orderBy: { id: 'desc' },

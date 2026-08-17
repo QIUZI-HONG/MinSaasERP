@@ -1,122 +1,181 @@
-# MiniSaaS ERP（迷你 SaaS 进销存系统）
+# MiniSaaS ERP
 
-> 面试演示项目 —— 对应"AI 全栈工程师（SaaS 方向）"岗位：Node.js + TypeScript + Prisma + SQL 后端 × Vue 3 + TypeScript + Vite 前端，全链路由 AI 辅助完成。
+![Node](https://img.shields.io/badge/Node.js-20%2B-339933?logo=nodedotjs)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)
+![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs)
+![License](https://img.shields.io/badge/License-MIT-blue)
+![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF)
 
-## 一、项目简介
+> 多租户风格的迷你 SaaS 进销存（ERP）系统：登录鉴权、商品、客户、订单（事务扣库存）、数据看板。
+> 技术栈与"AI 全栈工程师（SaaS 方向）"岗位完全对齐：**Node.js + TypeScript + Express + Prisma + SQL** 后端 × **Vue 3 + TypeScript + Vite** 前端。
 
-一个多租户风格的迷你 SaaS ERP 演示系统，覆盖**商品、客户、订单、数据看板**四大业务模块：
+## ✨ 核心特性
 
-- 登录鉴权：JWT + bcrypt 密码哈希
-- 商品管理：增删改查 + 按名称/SKU 搜索
-- 客户管理：增删改查
-- 订单管理：下单（**事务扣减库存**）、明细展开、状态流转（**取消订单自动回补库存**）
-- 数据看板：商品/客户/订单总数、累计营收、最近订单
+- **JWT 鉴权**：bcrypt 密码哈希、登录失败限流（5 次锁定 15 分钟）、token 过期/篡改校验
+- **订单核心链路**：数据库事务扣减库存、取消自动回补、状态机流转（禁止跳级）、幂等键防重复提交
+- **金额可信**：客户端伪造金额/单价不生效，后端按数据库单价重算
+- **数据看板**：统计口径正确（已取消订单不计入营收）
+- **质量保障**：严格入参校验、统一错误分级（400/404/413/500）、四层测试套件 106 例全绿
 
-## 二、技术栈
+## 🛠 技术栈
 
-| 层 | 技术 |
-| --- | --- |
-| 后端 | Node.js + TypeScript + Express + Prisma ORM + SQLite |
-| 前端 | Vue 3 + TypeScript + Vite + Element Plus + Vue Router + Axios |
-| 鉴权 | JWT（jsonwebtoken）+ bcryptjs |
-| 数据 | SQLite 单文件数据库（生产可平滑切换 PostgreSQL/MySQL） |
+| 层   | 技术                                                                        |
+| ---- | --------------------------------------------------------------------------- |
+| 后端 | Node.js + TypeScript + Express + Prisma ORM + SQLite（生产可换 PostgreSQL） |
+| 前端 | Vue 3 + TypeScript + Vite + Element Plus + Vue Router + Axios               |
+| 鉴权 | JWT（jsonwebtoken）+ bcryptjs                                               |
+| 安全 | helmet 安全头 + CORS 白名单 + 入参校验                                      |
+| 质量 | ESLint + Prettier + TypeScript strict + GitHub Actions CI                   |
+| 部署 | Docker / docker-compose（Nginx 托管前端 + API 反代）                        |
 
-## 三、目录结构
+## 🏗 架构
+
+```mermaid
+graph LR
+    subgraph 前端
+        Browser[浏览器] --> Nginx[Nginx 静态托管]
+        Nginx -->|/api 反代| Backend
+    end
+    subgraph 后端
+        Backend[Express API :3000] --> Auth[鉴权中间件 JWT]
+        Backend --> Routes[业务路由]
+        Routes --> Prisma[Prisma ORM]
+        Prisma --> DB[(SQLite)]
+    end
+    Tests[四层测试套件] --> Backend
+    Tests --> Browser
+```
+
+## 📁 目录结构
 
 ```
 ├── server/                  # 后端
 │   ├── prisma/
-│   │   ├── schema.prisma    # 数据模型（5 张表）
-│   │   └── seed.ts          # 演示数据
-│   └── src/
-│       ├── index.ts         # 入口：中间件 + 路由挂载 + 统一错误处理
-│       ├── db.ts            # Prisma 客户端
-│       ├── errors.ts        # 业务错误类
-│       ├── middleware/auth.ts  # JWT 签发 + 鉴权中间件
-│       └── routes/          # auth / products / customers / orders / dashboard
-└── web/                     # 前端
-    └── src/
-        ├── api/index.ts     # axios 封装（自动带 token、401 拦截）
-        ├── router/          # 路由 + 登录守卫
-        ├── store/auth.ts    # 登录状态
-        ├── constants.ts     # 订单状态字典
-        └── views/           # 登录 / 布局 / 看板 / 商品 / 客户 / 订单
+│   │   ├── schema.prisma    # 数据模型（5 张表 + 幂等键唯一约束）
+│   │   └── seed.ts          # 演示数据（可重复执行）
+│   ├── src/
+│   │   ├── index.ts         # 入口：helmet/CORS/路由/统一错误处理
+│   │   ├── logger.ts        # 结构化日志
+│   │   ├── validate.ts      # 严格入参校验（价格/数量/长度/类型）
+│   │   ├── errors.ts        # 统一错误体系（HttpError/BizError）
+│   │   ├── middleware/auth.ts  # JWT 签发与鉴权中间件
+│   │   └── routes/          # auth/products/customers/orders/dashboard
+│   └── Dockerfile           # 多阶段构建
+├── web/                     # 前端
+│   ├── src/
+│   │   ├── api/index.ts     # axios 封装（自动带 token、401 拦截）
+│   │   ├── router/          # 路由 + 登录守卫
+│   │   ├── store/auth.ts    # 登录状态
+│   │   └── views/           # 登录/布局/看板/商品/客户/订单
+│   ├── Dockerfile           # Nginx 托管
+│   └── nginx.conf           # SPA 回退 + API 反代
+├── tests/                   # 四层测试套件（零依赖框架 + Playwright）
+├── .github/workflows/ci.yml # CI：lint/typecheck/build/测试
+└── docker-compose.yml       # 一键编排
 ```
 
-## 四、快速启动
+## 🚀 快速开始
 
-> 需要 Node.js 18+（本机已验证 v24）。
+> 要求：Node.js ≥ 20（推荐 24，见 `.nvmrc`）
 
-### 1. 启动后端（终端 A）
+### 方式一：npm workspaces（推荐）
 
 ```bash
-cd server
-npm install
-npx prisma db push        # 建表（在 prisma/dev.db 生成数据库）
-npm run db:seed           # 写入演示数据
-npm run dev               # 启动，监听 http://localhost:3000
+npm install          # 安装全部 workspace 依赖
+npm run db:push      # 建表（server 目录，生成 dev.db）
+npm run db:seed      # 写入演示数据
+npm run dev          # 同时启动后端(3000) + 前端(5173)
 ```
 
-看到 `✅ MiniSaaS ERP API 已启动` 即成功。
+打开 http://localhost:5173 ，登录 `admin / admin123`。
 
-### 2. 启动前端（终端 B）
+### 方式二：分目录手动启动
 
 ```bash
-cd web
-npm install
-npm run dev               # 启动，打开 http://localhost:5173
+# 终端 A —— 后端
+cd server && npm install && npx prisma db push && npm run db:seed && npm run dev
+
+# 终端 B —— 前端
+cd web && npm install && npm run dev
 ```
 
-### 3. 登录
+### 方式三：Docker
 
-- 账号：`admin`
-- 密码：`admin123`
+```bash
+docker compose up --build
+# 访问 http://localhost:8080
+```
 
-> 前端开发服务器已配置代理：页面里的 `/api` 请求会自动转发到 `http://localhost:3000`，无需处理跨域。
+## 🔐 环境变量
 
-## 五、API 一览
+| 变量                | 位置        | 说明                                     |
+| ------------------- | ----------- | ---------------------------------------- |
+| `PORT`              | server/.env | API 端口，默认 3000                      |
+| `JWT_SECRET`        | server/.env | JWT 签名密钥，**生产必须替换为强随机串** |
+| `DATABASE_URL`      | server/.env | SQLite 连接串                            |
+| `CORS_ORIGINS`      | server/.env | CORS 白名单（逗号分隔）                  |
+| `VITE_API_BASE_URL` | web/.env    | 前端 API 地址（留空走 Vite 代理）        |
 
-| 方法 | 路径 | 说明 | 鉴权 |
-| --- | --- | --- | --- |
-| POST | `/api/auth/login` | 登录，返回 JWT | 否 |
-| POST | `/api/auth/register` | 注册 | 否 |
-| GET | `/api/dashboard/stats` | 看板统计 | 是 |
-| GET | `/api/products?q=` | 商品列表（可搜索） | 是 |
-| POST | `/api/products` | 新增商品 | 是 |
-| PUT | `/api/products/:id` | 修改商品 | 是 |
-| DELETE | `/api/products/:id` | 删除商品 | 是 |
-| GET | `/api/customers` | 客户列表 | 是 |
-| POST | `/api/customers` | 新增客户 | 是 |
-| PUT | `/api/customers/:id` | 修改客户 | 是 |
-| DELETE | `/api/customers/:id` | 删除客户 | 是 |
-| GET | `/api/orders` | 订单列表 | 是 |
-| POST | `/api/orders` | 创建订单（扣库存） | 是 |
-| PATCH | `/api/orders/:id/status` | 更新订单状态 | 是 |
+模板见 `server/.env.example` 与 `web/.env.example`，复制为 `.env` 后填写（`.env` 已被 git 忽略）。
 
-请求头：`Authorization: Bearer <token>`
+## 🧪 测试
 
-## 六、数据模型（5 张表）
+四层测试套件（`tests/`），修复回归后 **106/106 通过**：
+
+| 层                  | 命令                    | 说明                                   |
+| ------------------- | ----------------------- | -------------------------------------- |
+| 接口层（56 例）     | `npm run test:api`      | 全接口正/反向/边界/异常                |
+| 安全专项（23 例）   | `npm run test:security` | 注入/XSS/越权/限流/信息泄露            |
+| 并发健壮性（6 例）  | `npm run test:stress`   | 超卖/幂等/一致性                       |
+| Chrome E2E（21 例） | `npm run test:ui`       | 真实浏览器全流程（需先 `npm run dev`） |
+
+```bash
+npm run dev          # 先启动前后端
+npm test             # 跑 API + 安全 + 并发
+npm run test:ui      # 跑 Chrome E2E（依赖本机 Chrome）
+```
+
+测试报告与截图见 `tests/report/`。
+
+## 📡 API 一览
+
+鉴权：请求头 `Authorization: Bearer <token>`
+
+| 方法            | 路径                     | 说明                                           | 鉴权 |
+| --------------- | ------------------------ | ---------------------------------------------- | ---- |
+| POST            | `/api/auth/login`        | 登录（带失败限流）                             | 否   |
+| POST            | `/api/auth/register`     | 注册                                           | 否   |
+| GET             | `/api/dashboard/stats`   | 看板统计                                       | 是   |
+| GET             | `/api/products?q=`       | 商品列表（搜索）                               | 是   |
+| POST/PUT/DELETE | `/api/products[/:id]`    | 商品增改删（外键保护）                         | 是   |
+| GET             | `/api/customers`         | 客户列表                                       | 是   |
+| POST/PUT/DELETE | `/api/customers[/:id]`   | 客户增改删                                     | 是   |
+| GET             | `/api/orders`            | 订单列表                                       | 是   |
+| POST            | `/api/orders`            | 创建订单（事务扣库存，支持 `Idempotency-Key`） | 是   |
+| PATCH           | `/api/orders/:id/status` | 状态流转（状态机校验，取消回补库存）           | 是   |
+
+## 🗄 数据模型
 
 ```
 User（用户）1 ── n Order（订单）n ── 1 Customer（客户）
 Order（订单）1 ── n OrderItem（明细）n ── 1 Product（商品）
 ```
 
-设计要点：
+设计要点：明细存下单时单价快照（改价不影响历史订单）、订单号时间戳+随机串防撞号、幂等键唯一约束持久化防重。
 
-- `OrderItem.unitPrice` 保存**下单时单价快照**，商品改价不影响历史订单
-- `Order.status` 状态机：`PENDING → PAID → SHIPPED → DONE`，可 `CANCELLED` 取消
-- 下单与取消都在 **Prisma 事务**中完成，保证"扣库存"与"回补库存"与订单写入原子一致
+## 🤝 开发规范
 
-## 七、演示亮点（面试时重点讲）
+- 代码规范：ESLint（`npm run lint`）+ Prettier（`npm run format`），提交前必须零告警
+- 类型检查：`npm run typecheck`（TS strict）
+- 提交信息：[Conventional Commits](https://www.conventionalcommits.org/zh-hans/)
+- 详见 [CONTRIBUTING.md](./CONTRIBUTING.md)
 
-1. **AI 辅助全流程开发**：从模型设计、接口编写、前端页面到排错全程用 AI 工具（Cursor/Claude）生成，并逐段审查修正
-2. **数据一致性**：订单创建用 `$transaction` 事务扣减库存；取消订单回补库存；金额由后端计算而非信任前端
-3. **质量兜底**：统一错误处理（业务错误 400 / 其他 500）、外键约束保护（被订单引用的商品/客户不允许删除）、JWT 鉴权中间件
-4. **工程化**：TypeScript 严格模式、Prisma Schema 作为"数据库即代码"、axios 拦截器统一处理 401
+## 📄 文档索引
 
-## 八、已知简化（被问到时诚实说明）
+- [Changelog](./CHANGELOG.md) · [贡献指南](./CONTRIBUTING.md) · [MIT License](./LICENSE)
 
-- 数据库用 SQLite 单文件（演示方便）；生产换成 PostgreSQL 只需改 `schema.prisma` 一行 + 连接串
-- 未做分页/权限细粒度控制/单元测试（演示范围），但架构上已留出扩展点
-- 前端状态管理用轻量 reactive 而非 Pinia（演示够用，可低成本替换）
+## ⚠️ 已知限制（演示定位）
+
+- SQLite 单文件数据库，高并发写有锁竞争；生产建议切换 PostgreSQL（仅改 Prisma datasource + 连接串）
+- 登录限流为内存实现，多实例部署需换 Redis
+- 未做分页/细粒度 RBAC/单元测试覆盖（架构已留扩展点）

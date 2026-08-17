@@ -15,13 +15,21 @@ async function req(method, path, body, hdrs = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   let data = null;
-  try { data = await res.json(); } catch { /* 非 JSON 响应 */ }
+  try {
+    data = await res.json();
+  } catch {
+    /* 非 JSON 响应 */
+  }
   return { status: res.status, data };
 }
 
 // 断言辅助
-function assert(cond, msg) { if (!cond) throw new Error(msg); }
-function assertStatus(actual, expected, ctx) { assert(actual === expected, `${ctx}: 期望 ${expected}，实际 ${actual}`); }
+function assert(cond, msg) {
+  if (!cond) throw new Error(msg);
+}
+function assertStatus(actual, expected, ctx) {
+  assert(actual === expected, `${ctx}: 期望 ${expected}，实际 ${actual}`);
+}
 
 let token = '';
 let authHeaders = () => ({ Authorization: `Bearer ${token}` });
@@ -108,7 +116,12 @@ await test('A14 错误 secret 签发的 token', async () => {
   // 用错误 secret 生成合法签名格式的 token
   const crypto = await import('node:crypto');
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
-  const sig = crypto.createHmac('sha256', 'wrong-secret').update(`${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ userId: 1, username: 'admin', role: 'ADMIN', exp: 9999999999 })}`).digest('base64url');
+  const sig = crypto
+    .createHmac('sha256', 'wrong-secret')
+    .update(
+      `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ userId: 1, username: 'admin', role: 'ADMIN', exp: 9999999999 })}`
+    )
+    .digest('base64url');
   const fake = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ userId: 1, username: 'admin', role: 'ADMIN', exp: 9999999999 })}.${sig}`;
   const r = await req('GET', '/products', undefined, { Authorization: `Bearer ${fake}` });
   assertStatus(r.status, 401, '错误 secret');
@@ -118,8 +131,16 @@ await test('A15 过期 token', async () => {
   const crypto = await import('node:crypto');
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
   const header = b64({ alg: 'HS256', typ: 'JWT' });
-  const payload = b64({ userId: 1, username: 'admin', role: 'ADMIN', exp: Math.floor(Date.now() / 1000) - 3600 });
-  const sig = crypto.createHmac('sha256', 'minierp-demo-secret-change-me').update(`${header}.${payload}`).digest('base64url');
+  const payload = b64({
+    userId: 1,
+    username: 'admin',
+    role: 'ADMIN',
+    exp: Math.floor(Date.now() / 1000) - 3600,
+  });
+  const sig = crypto
+    .createHmac('sha256', 'minierp-demo-secret-change-me')
+    .update(`${header}.${payload}`)
+    .digest('base64url');
   const expired = `${header}.${payload}.${sig}`;
   const r = await req('GET', '/products', undefined, { Authorization: `Bearer ${expired}` });
   assertStatus(r.status, 401, '过期 token');
@@ -142,7 +163,12 @@ await test('B2 搜索命中（q=键盘）', async () => {
 });
 
 await test('B3 搜索无结果（q=不存在的商品xyz）', async () => {
-  const r = await req('GET', '/products?q=' + encodeURIComponent('不存在的商品xyz'), undefined, authHeaders());
+  const r = await req(
+    'GET',
+    '/products?q=' + encodeURIComponent('不存在的商品xyz'),
+    undefined,
+    authHeaders()
+  );
   assertStatus(r.status, 200, '搜索无结果');
   assert(r.data.length === 0, '应返回空数组');
 });
@@ -155,7 +181,12 @@ await test('B4 搜索特殊字符（q=% 通配符注入）', async () => {
 
 await test('B5 新增商品成功', async () => {
   const sku = 'TEST-SKU-' + Date.now();
-  const r = await req('POST', '/products', { sku, name: '测试商品', price: 99.9, stock: 10, category: '测试' }, authHeaders());
+  const r = await req(
+    'POST',
+    '/products',
+    { sku, name: '测试商品', price: 99.9, stock: 10, category: '测试' },
+    authHeaders()
+  );
   assertStatus(r.status, 200, '新增');
   assert(r.data.id > 0, '应返回新商品 id');
   createdProductIds.push(r.data.id);
@@ -194,7 +225,12 @@ await test('B11 新增失败：SKU 重复', async () => {
 await test('B12 修改商品成功', async () => {
   const sku = 'UPD-' + Date.now();
   const c = await req('POST', '/products', { sku, name: '待修改', price: 10, stock: 5 }, authHeaders());
-  const r = await req('PUT', `/products/${c.data.id}`, { sku, name: '已修改', price: 20, stock: 7, category: '新类' }, authHeaders());
+  const r = await req(
+    'PUT',
+    `/products/${c.data.id}`,
+    { sku, name: '已修改', price: 20, stock: 7, category: '新类' },
+    authHeaders()
+  );
   assertStatus(r.status, 200, '修改');
   assert(r.data.name === '已修改' && r.data.price === 20, '修改内容应生效');
   createdProductIds.push(c.data.id);
@@ -233,7 +269,12 @@ await test('C1 客户列表正常', async () => {
 });
 
 await test('C2 新增客户成功', async () => {
-  const r = await req('POST', '/customers', { name: '测试客户_' + Date.now(), contact: '张三', phone: '13900000000' }, authHeaders());
+  const r = await req(
+    'POST',
+    '/customers',
+    { name: '测试客户_' + Date.now(), contact: '张三', phone: '13900000000' },
+    authHeaders()
+  );
   assertStatus(r.status, 200, '新增');
   assert(r.data.id > 0, '应返回 id');
 });
@@ -245,7 +286,12 @@ await test('C3 新增失败：缺名称', async () => {
 
 await test('C4 修改客户成功', async () => {
   const c = await req('POST', '/customers', { name: '待改客户' }, authHeaders());
-  const r = await req('PUT', `/customers/${c.data.id}`, { name: '已改客户', phone: '13700000001' }, authHeaders());
+  const r = await req(
+    'PUT',
+    `/customers/${c.data.id}`,
+    { name: '已改客户', phone: '13700000001' },
+    authHeaders()
+  );
   assertStatus(r.status, 200, '修改');
   assert(r.data.name === '已改客户', '名称应更新');
 });
@@ -275,7 +321,12 @@ await test('D1 订单列表正常（含客户和明细）', async () => {
 await test('D2 创建订单成功并扣减库存', async () => {
   // 下单前查库存
   const before = (await req('GET', '/products?q=SKU-005', undefined, authHeaders())).data[0].stock;
-  const r = await req('POST', '/orders', { customerId: 4, remark: 'API测试', items: [{ productId: 5, quantity: 2 }] }, authHeaders());
+  const r = await req(
+    'POST',
+    '/orders',
+    { customerId: 4, remark: 'API测试', items: [{ productId: 5, quantity: 2 }] },
+    authHeaders()
+  );
   assertStatus(r.status, 200, '下单');
   assert(r.data.totalAmount === 178, `金额应为 89*2=178，实际 ${r.data.totalAmount}`);
   const after = (await req('GET', '/products?q=SKU-005', undefined, authHeaders())).data[0].stock;
@@ -294,28 +345,53 @@ await test('D4 下单失败：空明细', async () => {
 });
 
 await test('D5 下单失败：商品不存在', async () => {
-  const r = await req('POST', '/orders', { customerId: 1, items: [{ productId: 9999, quantity: 1 }] }, authHeaders());
+  const r = await req(
+    'POST',
+    '/orders',
+    { customerId: 1, items: [{ productId: 9999, quantity: 1 }] },
+    authHeaders()
+  );
   assertStatus(r.status, 400, '商品不存在');
   assert(r.data.message && r.data.message.includes('不存在'), '应返回友好提示');
 });
 
 await test('D6 下单失败：数量为 0', async () => {
-  const r = await req('POST', '/orders', { customerId: 1, items: [{ productId: 1, quantity: 0 }] }, authHeaders());
+  const r = await req(
+    'POST',
+    '/orders',
+    { customerId: 1, items: [{ productId: 1, quantity: 0 }] },
+    authHeaders()
+  );
   assertStatus(r.status, 400, '数量 0');
 });
 
 await test('D7 下单失败：数量为负', async () => {
-  const r = await req('POST', '/orders', { customerId: 1, items: [{ productId: 1, quantity: -3 }] }, authHeaders());
+  const r = await req(
+    'POST',
+    '/orders',
+    { customerId: 1, items: [{ productId: 1, quantity: -3 }] },
+    authHeaders()
+  );
   assertStatus(r.status, 400, '数量负');
 });
 
 await test('D8 下单失败：数量为小数', async () => {
-  const r = await req('POST', '/orders', { customerId: 1, items: [{ productId: 1, quantity: 1.5 }] }, authHeaders());
+  const r = await req(
+    'POST',
+    '/orders',
+    { customerId: 1, items: [{ productId: 1, quantity: 1.5 }] },
+    authHeaders()
+  );
   assertStatus(r.status, 400, '数量小数');
 });
 
 await test('D9 下单失败：库存不足', async () => {
-  const r = await req('POST', '/orders', { customerId: 1, items: [{ productId: 3, quantity: 9999 }] }, authHeaders());
+  const r = await req(
+    'POST',
+    '/orders',
+    { customerId: 1, items: [{ productId: 3, quantity: 9999 }] },
+    authHeaders()
+  );
   assertStatus(r.status, 400, '库存不足');
   assert(r.data.message && r.data.message.includes('库存不足'), '应返回友好提示');
 });
@@ -323,11 +399,16 @@ await test('D9 下单失败：库存不足', async () => {
 await test('D10 金额可信性：客户端伪造金额不生效', async () => {
   // 恶意客户端传 totalAmount: 0.01 和伪造 unitPrice
   const before = (await req('GET', '/products?q=SKU-001', undefined, authHeaders())).data[0].stock;
-  const r = await req('POST', '/orders', {
-    customerId: 4,
-    totalAmount: 0.01,
-    items: [{ productId: 1, quantity: 1, unitPrice: 0.01 }],
-  }, authHeaders());
+  const r = await req(
+    'POST',
+    '/orders',
+    {
+      customerId: 4,
+      totalAmount: 0.01,
+      items: [{ productId: 1, quantity: 1, unitPrice: 0.01 }],
+    },
+    authHeaders()
+  );
   assertStatus(r.status, 200, '下单');
   assert(r.data.totalAmount === 299, `金额应以后端单价 299 为准（防篡改），实际 ${r.data.totalAmount}`);
   const after = (await req('GET', '/products?q=SKU-001', undefined, authHeaders())).data[0].stock;
@@ -336,7 +417,12 @@ await test('D10 金额可信性：客户端伪造金额不生效', async () => {
 });
 
 await test('D11 状态流转：PENDING→PAID→SHIPPED→DONE', async () => {
-  const o = await req('POST', '/orders', { customerId: 4, items: [{ productId: 6, quantity: 1 }] }, authHeaders());
+  const o = await req(
+    'POST',
+    '/orders',
+    { customerId: 4, items: [{ productId: 6, quantity: 1 }] },
+    authHeaders()
+  );
   createdOrderIds.push(o.data.id);
   for (const s of ['PAID', 'SHIPPED', 'DONE']) {
     const r = await req('PATCH', `/orders/${o.data.id}/status`, { status: s }, authHeaders());
@@ -346,14 +432,24 @@ await test('D11 状态流转：PENDING→PAID→SHIPPED→DONE', async () => {
 });
 
 await test('D12 非法状态值', async () => {
-  const o = await req('POST', '/orders', { customerId: 4, items: [{ productId: 6, quantity: 1 }] }, authHeaders());
+  const o = await req(
+    'POST',
+    '/orders',
+    { customerId: 4, items: [{ productId: 6, quantity: 1 }] },
+    authHeaders()
+  );
   createdOrderIds.push(o.data.id);
   const r = await req('PATCH', `/orders/${o.data.id}/status`, { status: 'HACKED' }, authHeaders());
   assertStatus(r.status, 400, '非法状态');
 });
 
 await test('D13 状态跳级被拒绝（状态机校验，P3 缺陷修复）', async () => {
-  const o = await req('POST', '/orders', { customerId: 4, items: [{ productId: 6, quantity: 1 }] }, authHeaders());
+  const o = await req(
+    'POST',
+    '/orders',
+    { customerId: 4, items: [{ productId: 6, quantity: 1 }] },
+    authHeaders()
+  );
   createdOrderIds.push(o.data.id);
   const r = await req('PATCH', `/orders/${o.data.id}/status`, { status: 'DONE' }, authHeaders());
   assertStatus(r.status, 400, 'PENDING→DONE 跳级应 400');
@@ -361,7 +457,12 @@ await test('D13 状态跳级被拒绝（状态机校验，P3 缺陷修复）', a
 
 await test('D14 取消订单回补库存（一致性）', async () => {
   const before = (await req('GET', '/products?q=SKU-004', undefined, authHeaders())).data[0].stock;
-  const o = await req('POST', '/orders', { customerId: 4, items: [{ productId: 4, quantity: 3 }] }, authHeaders());
+  const o = await req(
+    'POST',
+    '/orders',
+    { customerId: 4, items: [{ productId: 4, quantity: 3 }] },
+    authHeaders()
+  );
   assertStatus(o.status, 200, '下单');
   const mid = (await req('GET', '/products?q=SKU-004', undefined, authHeaders())).data[0].stock;
   assert(mid === before - 3, `下单后库存应为 ${before - 3}`);
@@ -373,7 +474,12 @@ await test('D14 取消订单回补库存（一致性）', async () => {
 
 await test('D15 已取消订单不允许再次流转（状态机拦截）', async () => {
   const before = (await req('GET', '/products?q=SKU-002', undefined, authHeaders())).data[0].stock;
-  const o = await req('POST', '/orders', { customerId: 4, items: [{ productId: 2, quantity: 2 }] }, authHeaders());
+  const o = await req(
+    'POST',
+    '/orders',
+    { customerId: 4, items: [{ productId: 2, quantity: 2 }] },
+    authHeaders()
+  );
   await req('PATCH', `/orders/${o.data.id}/status`, { status: 'CANCELLED' }, authHeaders());
   // 再次 PATCH 取消：状态机应拒绝（CANCELLED 为终态）
   const again = await req('PATCH', `/orders/${o.data.id}/status`, { status: 'CANCELLED' }, authHeaders());
@@ -412,7 +518,12 @@ await test('E1 看板统计字段齐全', async () => {
 
 await test('E2 统计口径：取消订单不计入营收', async () => {
   const before = (await req('GET', '/dashboard/stats', undefined, authHeaders())).data;
-  const o = await req('POST', '/orders', { customerId: 4, items: [{ productId: 2, quantity: 1 }] }, authHeaders());
+  const o = await req(
+    'POST',
+    '/orders',
+    { customerId: 4, items: [{ productId: 2, quantity: 1 }] },
+    authHeaders()
+  );
   const paid = (await req('GET', '/dashboard/stats', undefined, authHeaders())).data;
   assert(paid.revenue === before.revenue + 129, `下单后营收应 +129，实际 ${paid.revenue - before.revenue}`);
   await req('PATCH', `/orders/${o.data.id}/status`, { status: 'CANCELLED' }, authHeaders());

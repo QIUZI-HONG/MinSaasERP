@@ -47,12 +47,18 @@ browser = await chromium.launch({
 });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 page = await context.newPage();
-page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
+page.on('console', (msg) => {
+  if (msg.type() === 'error') consoleErrors.push(msg.text());
+});
 page.on('pageerror', (err) => consoleErrors.push('PAGE_ERROR: ' + err.message));
 page.on('response', async (res) => {
   if (res.url().includes('/api/orders') && res.request().method() === 'POST') {
     let body = '';
-    try { body = (await res.text()).slice(0, 300); } catch { /* ignore */ }
+    try {
+      body = (await res.text()).slice(0, 300);
+    } catch {
+      /* ignore */
+    }
     console.log(`    [诊断] POST /api/orders → ${res.status()}: ${body}`);
   }
 });
@@ -349,7 +355,9 @@ await test('U21 控制台无未预期 JS 错误（整轮 E2E）', async () => {
     (e) => e.includes('401 (Unauthorized)'), // U1 未登录访问 / U3 登录失败
     (e) => e.includes('400 (Bad Request)'), // U12 删除被引用商品（业务拒绝）
   ];
-  const unexpected = consoleErrors.filter((e) => !whitelist.some((w) => w(e)) && !e.includes('Download the Vue Devtools'));
+  const unexpected = consoleErrors.filter(
+    (e) => !whitelist.some((w) => w(e)) && !e.includes('Download the Vue Devtools')
+  );
   if (unexpected.length > 0) throw new Error('存在未预期控制台错误:\n' + unexpected.join('\n'));
   console.log(`    （全程共捕获 ${consoleErrors.length} 条 console error，全部为白名单内预期行为）`);
 });

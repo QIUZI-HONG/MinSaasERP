@@ -1,5 +1,8 @@
 // 订单状态字典：状态码 -> 显示名 + 标签颜色
-export const ORDER_STATUS: Record<string, { label: string; type: 'primary' | 'success' | 'warning' | 'info' | 'danger' }> = {
+export const ORDER_STATUS: Record<
+  string,
+  { label: string; type: 'primary' | 'success' | 'warning' | 'info' | 'danger' }
+> = {
   PENDING: { label: '待支付', type: 'warning' },
   PAID: { label: '已支付', type: 'primary' },
   SHIPPED: { label: '已发货', type: 'success' },

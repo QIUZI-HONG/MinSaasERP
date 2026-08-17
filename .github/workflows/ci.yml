@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  quality:
+    name: Lint / Typecheck / Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+  api-tests:
+    name: API / Security / Concurrency tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup database
+        working-directory: server
+        run: |
+          npx prisma db push --accept-data-loss
+          npm run db:seed
+
+      - name: Start backend
+        working-directory: server
+        run: npm run dev &
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:3000/api/health; then exit 0; fi
+            sleep 1
+          done
+          echo "Backend failed to start" && exit 1
+
+      - name: Run API tests
+        run: node api.test.mjs
+
+      - name: Run security tests
+        run: node security.test.mjs
+
+      - name: Run concurrency tests
+        run: node stress.test.mjs
+
+      - name: Reset database
+        working-directory: server
+        run: npm run db:seed
+
+# 说明：
+# 1. UI E2E（ui.test.mjs）依赖本机 Chrome 路径，在 CI 中需配置浏览器，建议本地执行：
+#    npm run dev 后执行 npm run test:ui
+# 2. api/security/stress 测试会写入数据库，请在测试后重置 seed（如上）

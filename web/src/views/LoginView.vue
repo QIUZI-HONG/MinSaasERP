@@ -19,13 +19,7 @@
             @keyup.enter="onSubmit"
           />
         </el-form-item>
-        <el-button
-          type="primary"
-          size="large"
-          style="width: 100%"
-          :loading="loading"
-          @click="onSubmit"
-        >
+        <el-button type="primary" size="large" style="width: 100%" :loading="loading" @click="onSubmit">
           登 录
         </el-button>
       </el-form>

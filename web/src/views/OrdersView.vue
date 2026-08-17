@@ -17,9 +17,7 @@
             </el-table-column>
             <el-table-column prop="quantity" label="数量" width="90" />
             <el-table-column label="小计" width="130">
-              <template #default="{ row: it }">
-                ¥ {{ (it.unitPrice * it.quantity).toFixed(2) }}
-              </template>
+              <template #default="{ row: it }"> ¥ {{ (it.unitPrice * it.quantity).toFixed(2) }} </template>
             </el-table-column>
           </el-table>
         </template>
@@ -41,16 +39,13 @@
       <el-table-column prop="createdAt" label="创建时间" width="175" />
       <el-table-column label="操作" width="130" fixed="right">
         <template #default="{ row }">
-          <el-dropdown
-            v-if="STATUS_FLOW[row.status]?.length"
-            @command="(cmd) => onChangeStatus(row, cmd)"
-          >
+          <el-dropdown v-if="STATUS_FLOW[row.status]?.length" @command="onStatusCommand">
             <el-button link type="primary">
               变更状态<el-icon class="el-icon--right"><ArrowDown /></el-icon>
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item v-for="s in STATUS_FLOW[row.status]" :key="s" :command="s">
+                <el-dropdown-item v-for="s in STATUS_FLOW[row.status]" :key="s" :command="`${row.id}:${s}`">
                   {{ ORDER_STATUS[s].label }}
                 </el-dropdown-item>
               </el-dropdown-menu>
@@ -81,12 +76,7 @@
                 />
               </el-select>
               <el-input-number v-model="item.quantity" :min="1" style="width: 140px" />
-              <el-button
-                link
-                type="danger"
-                :disabled="form.items.length === 1"
-                @click="removeItem(idx)"
-              >
+              <el-button link type="danger" :disabled="form.items.length === 1" @click="removeItem(idx)">
                 删除
               </el-button>
             </div>
@@ -203,9 +193,11 @@ async function onCreate() {
   }
 }
 
-async function onChangeStatus(row: Order, status: string) {
+// 状态变更命令处理：command 编码为 `${订单id}:${状态}`，直接绑定为事件处理器（无闭包、类型明确）
+async function onStatusCommand(cmd: string | number | object) {
+  const [id, status] = String(cmd).split(':');
   try {
-    await api.updateOrderStatus(row.id, status);
+    await api.updateOrderStatus(Number(id), status);
     ElMessage.success(`订单已变更为「${ORDER_STATUS[status].label}」`);
     load();
   } catch (e: any) {

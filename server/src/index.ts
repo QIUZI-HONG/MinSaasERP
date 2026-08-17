@@ -1,5 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
@@ -8,13 +9,15 @@ import orderRoutes from './routes/orders';
 import dashboardRoutes from './routes/dashboard';
 import { requireAuth } from './middleware/auth';
 import { HttpError } from './errors';
+import { logger } from './logger';
 
 dotenv.config();
 
 const app = express();
 
-// 安全加固：不暴露技术栈信息
-app.disable('x-powered-by');
+// 安全加固
+app.disable('x-powered-by'); // 不暴露技术栈信息
+app.use(helmet()); // 安全响应头（CSP / HSTS / X-Content-Type-Options 等）
 
 // CORS 白名单：环境变量 CORS_ORIGINS 配置，默认放行本地开发前端
 // 无 Origin 的请求（curl / 同源代理 / 服务端调用）不受影响
@@ -70,12 +73,12 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   if (err && err.code === 'P2025') {
     return res.status(404).json({ message: '资源不存在' });
   }
-  // 4. 兜底：内部错误，不泄露堆栈
-  console.error('[服务器错误]', err);
+  // 4. 兜底：内部错误，记录日志但不泄露堆栈
+  logger.error('服务器内部错误', { message: err?.message, stack: err?.stack });
   res.status(500).json({ message: '服务器内部错误，请稍后再试' });
 });
 
 const PORT = Number(process.env.PORT) || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ MiniSaaS ERP API 已启动：http://localhost:${PORT}`);
+  logger.info(`MiniSaaS ERP API 已启动：http://localhost:${PORT}`);
 });

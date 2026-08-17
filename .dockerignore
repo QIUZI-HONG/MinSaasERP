@@ -1,0 +1,14 @@
+# server
+node_modules
+dist
+.env
+server/prisma/dev.db
+
+# web
+web/node_modules
+web/dist
+web/.env
+
+# tests
+tests/node_modules
+tests/report

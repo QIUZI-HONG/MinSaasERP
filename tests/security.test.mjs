@@ -15,12 +15,20 @@ async function req(method, path, body, hdrs = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   let data = null;
-  try { data = await res.json(); } catch { /* 非 JSON */ }
+  try {
+    data = await res.json();
+  } catch {
+    /* 非 JSON */
+  }
   return { status: res.status, data, raw: await res.text().catch(() => '') };
 }
 
-function assert(cond, msg) { if (!cond) throw new Error(msg); }
-function assertStatus(actual, expected, ctx) { assert(actual === expected, `${ctx}: 期望 ${expected}，实际 ${actual}`); }
+function assert(cond, msg) {
+  if (!cond) throw new Error(msg);
+}
+function assertStatus(actual, expected, ctx) {
+  assert(actual === expected, `${ctx}: 期望 ${expected}，实际 ${actual}`);
+}
 
 let token = '';
 const authHeaders = () => ({ Authorization: `Bearer ${token}` });
@@ -40,7 +48,12 @@ await test('S1-1 商品搜索：经典 OR 注入', async () => {
 });
 
 await test('S1-2 商品搜索：注释注入', async () => {
-  const r = await req('GET', '/products?q=' + encodeURIComponent("'; DROP TABLE Product;--"), undefined, authHeaders());
+  const r = await req(
+    'GET',
+    '/products?q=' + encodeURIComponent("'; DROP TABLE Product;--"),
+    undefined,
+    authHeaders()
+  );
   assertStatus(r.status, 200, '注释注入不应 500');
   assert(Array.isArray(r.data), '应返回数组');
 });
@@ -66,7 +79,12 @@ console.log('\n===== S2. XSS（存储型载体验证） =====');
 let xssProductId = null;
 await test('S2-1 商品名可存储 XSS 载体', async () => {
   const payload = '<script>window.__xss=1</script>';
-  const r = await req('POST', '/products', { sku: 'XSS-' + Date.now(), name: payload, price: 1 }, authHeaders());
+  const r = await req(
+    'POST',
+    '/products',
+    { sku: 'XSS-' + Date.now(), name: payload, price: 1 },
+    authHeaders()
+  );
   assertStatus(r.status, 200, '创建');
   xssProductId = r.data.id;
 });
@@ -115,7 +133,10 @@ await test('S4-1 错误响应不泄露堆栈（P2 修复后：删除不存在返
   const r = await req('DELETE', '/products/99999', undefined, authHeaders());
   assertStatus(r.status, 404, '删除不存在应 404 而非 500');
   const body = r.raw;
-  assert(!body.includes('at ') && !body.includes('node_modules') && !body.includes('RequestHandler'), '响应不应含堆栈信息');
+  assert(
+    !body.includes('at ') && !body.includes('node_modules') && !body.includes('RequestHandler'),
+    '响应不应含堆栈信息'
+  );
   assert(r.data.message === '商品不存在', '404 应返回友好消息');
 });
 
@@ -134,7 +155,10 @@ await test('S4-4 CORS 白名单：非白名单来源不返回 CORS 头（P3 缺�
   const evil = await fetch(BASE + '/health', { headers: { Origin: 'https://evil.example.com' } });
   assert(evil.headers.get('access-control-allow-origin') === null, '恶意来源不应获得 ACAO 头');
   const allowed = await fetch(BASE + '/health', { headers: { Origin: 'http://localhost:5173' } });
-  assert(allowed.headers.get('access-control-allow-origin') === 'http://localhost:5173', '白名单来源应获得 ACAO 头');
+  assert(
+    allowed.headers.get('access-control-allow-origin') === 'http://localhost:5173',
+    '白名单来源应获得 ACAO 头'
+  );
 });
 
 console.log('\n===== S5. 请求健壮性 =====');
@@ -159,7 +183,12 @@ await test('S5-3 字段类型异常：price 为字符串 abc 返回 400（P2 缺
 });
 
 await test('S5-4 字段类型异常：quantity 为布尔 true 返回 400（P3 缺陷修复）', async () => {
-  const r = await req('POST', '/orders', { customerId: 4, items: [{ productId: 6, quantity: true }] }, authHeaders());
+  const r = await req(
+    'POST',
+    '/orders',
+    { customerId: 4, items: [{ productId: 6, quantity: true }] },
+    authHeaders()
+  );
   assertStatus(r.status, 400, '布尔数量应 400（严格类型校验）');
 });
 
@@ -188,7 +217,10 @@ await test('S6-1 密码以 bcrypt 哈希存储，非明文', async () => {
   const row = db.prepare('SELECT username, passwordHash FROM User WHERE username = ?').get('admin');
   db.close();
   assert(row, 'admin 用户应存在');
-  assert(String(row.passwordHash).startsWith('$2'), `应为 bcrypt 格式($2...)，实际前缀 ${String(row.passwordHash).slice(0, 4)}`);
+  assert(
+    String(row.passwordHash).startsWith('$2'),
+    `应为 bcrypt 格式($2...)，实际前缀 ${String(row.passwordHash).slice(0, 4)}`
+  );
   assert(!String(row.passwordHash).includes('admin123'), '哈希不应包含明文');
   // 复用 server 目录下的 bcryptjs 验证哈希可校验
   const { createRequire } = await import('node:module');

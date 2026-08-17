@@ -20,17 +20,27 @@ export function toInt(v: unknown, field: string, opts: { min?: number; max?: num
 }
 
 /** 字符串校验：必须为字符串，可选长度边界；空字符串可由 required 控制 */
-export function toStr(v: unknown, field: string, opts: { required?: boolean; min?: number; max?: number } = {}): string {
+export function toStr(
+  v: unknown,
+  field: string,
+  opts: { required?: boolean; min?: number; max?: number } = {}
+): string {
   if (typeof v !== 'string') throw badRequest(`参数 ${field} 必须是字符串`);
   const s = v.trim();
   if (opts.required && !s) throw badRequest(`参数 ${field} 不能为空`);
-  if (opts.min !== undefined && s.length < opts.min) throw badRequest(`参数 ${field} 长度不能小于 ${opts.min}`);
-  if (opts.max !== undefined && s.length > opts.max) throw badRequest(`参数 ${field} 长度不能超过 ${opts.max}`);
+  if (opts.min !== undefined && s.length < opts.min)
+    throw badRequest(`参数 ${field} 长度不能小于 ${opts.min}`);
+  if (opts.max !== undefined && s.length > opts.max)
+    throw badRequest(`参数 ${field} 长度不能超过 ${opts.max}`);
   return s;
 }
 
 /** 可选字符串：undefined/null/空 返回 null，否则走长度校验 */
-export function toOptStr(v: unknown, field: string, opts: { min?: number; max?: number } = {}): string | null {
+export function toOptStr(
+  v: unknown,
+  field: string,
+  opts: { min?: number; max?: number } = {}
+): string | null {
   if (v === undefined || v === null || v === '') return null;
   return toStr(v, field, opts);
 }
