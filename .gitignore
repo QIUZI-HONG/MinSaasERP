@@ -22,3 +22,6 @@ server/prisma/dev.db-journal
 .idea/
 .DS_Store
 Thumbs.db
+
+# 测试产物（本地生成）
+tests/report/

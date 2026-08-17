@@ -36,24 +36,6 @@ jobs:
   api-tests:
     name: API / Security / Concurrency tests
     runs-on: ubuntu-latest
-    services:
-      # PostgreSQL 测试实例（生产同样使用 PostgreSQL）
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: minierp
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      # 覆盖 server/.env（dotenv 不覆盖已存在的环境变量）
-      DATABASE_URL: postgresql://test:test@localhost:5432/minierp?sslmode=disable
     steps:
       - uses: actions/checkout@v4
 
