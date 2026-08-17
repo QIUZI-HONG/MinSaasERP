@@ -1,0 +1,128 @@
+{
+  "suite": "安全专项",
+  "total": 22,
+  "passed": 21,
+  "failed": 1,
+  "observations": [
+    "S2-2b 存储型 XSS 载体已入库，最终防护取决于前端渲染是否转义（见 UI 测试 U7）",
+    "S3-4 暴力破解防护：连续 6 次错误密码全部仅返回 401，无锁定/限流（⚠️ 建议加登录失败限流与锁定）",
+    "S4-3 响应头 X-Powered-By: Express（⚠️ 暴露技术栈信息，建议 app.disable(\"x-powered-by\")）",
+    "S4-4 CORS Access-Control-Allow-Origin: *（⚠️ 全开放，生产环境应收敛为白名单）",
+    "S5-3 price=\"abc\"：返回 500",
+    "S5-4 quantity=true：返回 200（⚠️ 布尔被 Number() 转为 1，宽松校验）",
+    "S5-5 200KB 请求体：返回 500（⚠️ 意外状态 500）"
+  ],
+  "cases": [
+    {
+      "name": "S1-1 商品搜索：经典 OR 注入",
+      "pass": true,
+      "ms": 4
+    },
+    {
+      "name": "S1-2 商品搜索：注释注入",
+      "pass": true,
+      "ms": 11
+    },
+    {
+      "name": "S1-3 登录：用户名注入",
+      "pass": true,
+      "ms": 16
+    },
+    {
+      "name": "S1-4 登录：万能密码注入",
+      "pass": true,
+      "ms": 58
+    },
+    {
+      "name": "S1-5 数据库完整性：商品表未被注入破坏",
+      "pass": true,
+      "ms": 8
+    },
+    {
+      "name": "S2-1 商品名可存储 XSS 载体",
+      "pass": true,
+      "ms": 21
+    },
+    {
+      "name": "S2-2 客户名可存储 XSS 载体",
+      "pass": true,
+      "ms": 14
+    },
+    {
+      "name": "S3-1 空 Bearer token",
+      "pass": true,
+      "ms": 8
+    },
+    {
+      "name": "S3-2 无 Bearer 前缀",
+      "pass": true,
+      "ms": 14
+    },
+    {
+      "name": "S3-3 token 类型异常（数字）",
+      "pass": true,
+      "ms": 14
+    },
+    {
+      "name": "S4-1 服务器内部错误不泄露堆栈",
+      "pass": true,
+      "ms": 11
+    },
+    {
+      "name": "S4-2 登录失败响应不泄露用户是否存在",
+      "pass": true,
+      "ms": 73
+    },
+    {
+      "name": "S4-3 响应头：X-Powered-By",
+      "pass": true,
+      "ms": 13
+    },
+    {
+      "name": "S4-4 CORS 配置检查",
+      "pass": true,
+      "ms": 1
+    },
+    {
+      "name": "S5-1 请求体为 JSON 数组",
+      "pass": true,
+      "ms": 15
+    },
+    {
+      "name": "S5-2 请求体为 null / 空",
+      "pass": false,
+      "error": "期望 400/401，实际 500",
+      "ms": 15
+    },
+    {
+      "name": "S5-3 字段类型异常：price 为字符串 abc",
+      "pass": true,
+      "ms": 14
+    },
+    {
+      "name": "S5-4 字段类型异常：quantity 为布尔 true",
+      "pass": true,
+      "ms": 20
+    },
+    {
+      "name": "S5-5 超大请求体（>100KB 默认限制）",
+      "pass": true,
+      "ms": 5
+    },
+    {
+      "name": "S5-6 不支持的方法",
+      "pass": true,
+      "ms": 13
+    },
+    {
+      "name": "S5-7 路径遍历",
+      "pass": true,
+      "ms": 14
+    },
+    {
+      "name": "S6-1 密码以 bcrypt 哈希存储，非明文",
+      "pass": true,
+      "ms": 63
+    }
+  ]
+}
