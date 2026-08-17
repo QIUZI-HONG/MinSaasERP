@@ -27,5 +27,10 @@
     "prisma": "^6.10.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "prisma@6.19.3": true
   }
 }

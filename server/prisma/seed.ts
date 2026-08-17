@@ -22,25 +22,25 @@ async function main() {
   await prisma.product.deleteMany();
   await prisma.customer.deleteMany();
 
-  // 3. 商品
+  // 3. 商品（显式指定 id，保证 Seed 可重复执行且 id 稳定）
   const productData = [
-    { sku: 'SKU-001', name: '机械键盘（青轴）', price: 299, stock: 50, category: '外设' },
-    { sku: 'SKU-002', name: '无线鼠标', price: 129, stock: 80, category: '外设' },
-    { sku: 'SKU-003', name: '27 寸 4K 显示器', price: 1599, stock: 20, category: '显示设备' },
-    { sku: 'SKU-004', name: 'USB-C 扩展坞', price: 219, stock: 60, category: '配件' },
-    { sku: 'SKU-005', name: '铝合金笔记本支架', price: 89, stock: 100, category: '配件' },
-    { sku: 'SKU-006', name: '主动降噪耳机', price: 699, stock: 35, category: '音频' },
+    { id: 1, sku: 'SKU-001', name: '机械键盘（青轴）', price: 299, stock: 50, category: '外设' },
+    { id: 2, sku: 'SKU-002', name: '无线鼠标', price: 129, stock: 80, category: '外设' },
+    { id: 3, sku: 'SKU-003', name: '27 寸 4K 显示器', price: 1599, stock: 20, category: '显示设备' },
+    { id: 4, sku: 'SKU-004', name: 'USB-C 扩展坞', price: 219, stock: 60, category: '配件' },
+    { id: 5, sku: 'SKU-005', name: '铝合金笔记本支架', price: 89, stock: 100, category: '配件' },
+    { id: 6, sku: 'SKU-006', name: '主动降噪耳机', price: 699, stock: 35, category: '音频' },
   ];
   for (const p of productData) {
     await prisma.product.create({ data: p });
   }
 
-  // 4. 客户
+  // 4. 客户（显式指定 id，订单用 customerId 1~4 引用）
   const customerData = [
-    { name: '深圳市蓝海贸易有限公司', contact: '王经理', phone: '13800000001', address: '深圳市南山区' },
-    { name: '上海星河电商', contact: '李女士', phone: '13800000002', address: '上海市浦东新区' },
-    { name: '杭州云帆科技', contact: '张工', phone: '13800000003', address: '杭州市西湖区' },
-    { name: '广州南沙跨境供应链', contact: '陈总', phone: '13800000004', address: '广州市南沙区' },
+    { id: 1, name: '深圳市蓝海贸易有限公司', contact: '王经理', phone: '13800000001', address: '深圳市南山区' },
+    { id: 2, name: '上海星河电商', contact: '李女士', phone: '13800000002', address: '上海市浦东新区' },
+    { id: 3, name: '杭州云帆科技', contact: '张工', phone: '13800000003', address: '杭州市西湖区' },
+    { id: 4, name: '广州南沙跨境供应链', contact: '陈总', phone: '13800000004', address: '广州市南沙区' },
   ];
   for (const c of customerData) {
     await prisma.customer.create({ data: c });
