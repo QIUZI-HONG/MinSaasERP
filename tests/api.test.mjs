@@ -57,10 +57,10 @@ await test('A5 登录失败：空密码', async () => {
   assertStatus(r.status, 400, '空密码');
 });
 
-{
+await test('A6 用户名带空格：trim 后正常登录（已修复）', async () => {
   const r = await req('POST', '/auth/login', { username: ' admin ', password: 'admin123' });
-  observe(`A6 用户名带空格未 trim：返回 ${r.status}${r.status === 200 ? '（空格被容忍，建议统一 trim）' : '（拒绝，符合预期）'}`);
-}
+  assertStatus(r.status, 200, '空格用户名应被 trim 后接受');
+});
 
 await test('A7 注册成功', async () => {
   const u = 'tester_' + Date.now();
@@ -79,11 +79,11 @@ await test('A9 注册失败：空密码', async () => {
   assertStatus(r.status, 400, '空密码');
 });
 
-{
+await test('A10 超长用户名（1000 字符）被拒绝', async () => {
   const longName = 'x'.repeat(1000);
   const r = await req('POST', '/auth/register', { username: longName, password: 'p123456' });
-  observe(`A10 超长用户名(1000字符)：返回 ${r.status}${r.status === 200 ? '（数据库无长度限制，注册成功——建议加长度校验）' : ''}`);
-}
+  assertStatus(r.status, 400, '超长用户名应 400');
+});
 
 await test('A11 未带 token 访问受保护接口', async () => {
   const r = await req('GET', '/products');
@@ -176,17 +176,15 @@ await test('B8 新增失败：缺价格', async () => {
   assertStatus(r.status, 400, '缺价格');
 });
 
-{
+await test('B9 价格为 0 被拒绝（业务校验）', async () => {
   const r = await req('POST', '/products', { sku: 'ZERO-PRICE', name: '零价商品', price: 0 }, authHeaders());
-  observe(`B9 价格为 0：返回 ${r.status}${r.status === 200 ? '（价格为 0 被接受——建议业务上禁止 0 元/负价商品）' : ''}`);
-  if (r.status === 200) createdProductIds.push(r.data.id);
-}
+  assertStatus(r.status, 400, '0 元商品应 400');
+});
 
-{
+await test('B10 价格为负被拒绝（P1 缺陷修复）', async () => {
   const r = await req('POST', '/products', { sku: 'NEG-PRICE', name: '负价商品', price: -50 }, authHeaders());
-  observe(`B10 价格为负：返回 ${r.status}${r.status === 200 ? '（负价格被接受——⚠️ 严重缺陷：可创建负价商品导致订单金额异常）' : ''}`);
-  if (r.status === 200) createdProductIds.push(r.data.id);
-}
+  assertStatus(r.status, 400, '负价商品应 400');
+});
 
 await test('B11 新增失败：SKU 重复', async () => {
   const r = await req('POST', '/products', { sku: 'SKU-001', name: '重复SKU', price: 1 }, authHeaders());
@@ -220,10 +218,10 @@ await test('B15 删除失败：被订单引用（外键保护）', async () => {
   assert(r.data.message && r.data.message.includes('引用'), '应返回友好提示');
 });
 
-{
+await test('B16 删除不存在的商品返回 404（P2 缺陷修复）', async () => {
   const r = await req('DELETE', '/products/99999', undefined, authHeaders());
-  observe(`B16 删除不存在的商品 id=99999：返回 ${r.status}${r.status !== 404 ? '（⚠️ 应为 404，实际为 ' + r.status + '——资源不存在未区分）' : ''}`);
-}
+  assertStatus(r.status, 404, '不存在资源应 404');
+});
 
 // ---------- C. 客户模块 ----------
 console.log('\n===== C. 客户模块 =====');
@@ -257,10 +255,10 @@ await test('C5 删除失败：客户有订单（外键保护）', async () => {
   assertStatus(r.status, 400, '引用保护');
 });
 
-{
+await test('C6 删除不存在的客户返回 404（P2 缺陷修复）', async () => {
   const r = await req('DELETE', '/customers/99999', undefined, authHeaders());
-  observe(`C6 删除不存在的客户 id=99999：返回 ${r.status}${r.status !== 404 ? '（⚠️ 应为 404，实际为 ' + r.status + '）' : ''}`);
-}
+  assertStatus(r.status, 404, '不存在资源应 404');
+});
 
 // ---------- D. 订单模块 ----------
 console.log('\n===== D. 订单模块 =====');
@@ -354,12 +352,12 @@ await test('D12 非法状态值', async () => {
   assertStatus(r.status, 400, '非法状态');
 });
 
-{
+await test('D13 状态跳级被拒绝（状态机校验，P3 缺陷修复）', async () => {
   const o = await req('POST', '/orders', { customerId: 4, items: [{ productId: 6, quantity: 1 }] }, authHeaders());
   createdOrderIds.push(o.data.id);
   const r = await req('PATCH', `/orders/${o.data.id}/status`, { status: 'DONE' }, authHeaders());
-  observe(`D13 状态跳级 PENDING→DONE：返回 ${r.status}${r.status === 200 ? '（⚠️ 后端未校验状态机流转顺序，可跳级——建议补状态机校验）' : ''}`);
-}
+  assertStatus(r.status, 400, 'PENDING→DONE 跳级应 400');
+});
 
 await test('D14 取消订单回补库存（一致性）', async () => {
   const before = (await req('GET', '/products?q=SKU-004', undefined, authHeaders())).data[0].stock;
@@ -373,13 +371,32 @@ await test('D14 取消订单回补库存（一致性）', async () => {
   assert(after === before, `取消后库存应回到 ${before}，实际 ${after}`);
 });
 
-await test('D15 重复取消不重复回补库存', async () => {
+await test('D15 已取消订单不允许再次流转（状态机拦截）', async () => {
   const before = (await req('GET', '/products?q=SKU-002', undefined, authHeaders())).data[0].stock;
   const o = await req('POST', '/orders', { customerId: 4, items: [{ productId: 2, quantity: 2 }] }, authHeaders());
   await req('PATCH', `/orders/${o.data.id}/status`, { status: 'CANCELLED' }, authHeaders());
-  await req('PATCH', `/orders/${o.data.id}/status`, { status: 'CANCELLED' }, authHeaders());
+  // 再次 PATCH 取消：状态机应拒绝（CANCELLED 为终态）
+  const again = await req('PATCH', `/orders/${o.data.id}/status`, { status: 'CANCELLED' }, authHeaders());
+  assertStatus(again.status, 400, '已取消订单重复流转应 400');
   const after = (await req('GET', '/products?q=SKU-002', undefined, authHeaders())).data[0].stock;
-  assert(after === before, `重复取消库存应只回补一次，实际 ${after}（期望 ${before}）`);
+  assert(after === before, `库存应只回补一次，实际 ${after}（期望 ${before}）`);
+});
+
+await test('D16 幂等键：相同 Idempotency-Key 并发请求只创建一单（P3 缺陷修复）', async () => {
+  const sku = 'IDEM-' + Date.now();
+  await req('POST', '/products', { sku, name: '幂等商品', price: 10, stock: 20 }, authHeaders());
+  const products = (await req('GET', `/products?q=${sku}`, undefined, authHeaders())).data;
+  const pid = products[0].id;
+  const key = 'test-key-' + Date.now();
+  const payload = { customerId: 4, items: [{ productId: pid, quantity: 3 }] };
+  const [r1, r2] = await Promise.all([
+    req('POST', '/orders', payload, { ...authHeaders(), 'Idempotency-Key': key }),
+    req('POST', '/orders', payload, { ...authHeaders(), 'Idempotency-Key': key }),
+  ]);
+  assert(r1.status === 200 && r2.status === 200, `两次请求都应 200（r1=${r1.status}, r2=${r2.status}）`);
+  assert(r1.data.id === r2.data.id, '应返回同一个订单（幂等生效）');
+  const after = (await req('GET', `/products?q=${sku}`, undefined, authHeaders())).data[0];
+  assert(after.stock === 17, `库存应只扣一次（20→17），实际 ${after.stock}`);
 });
 
 // ---------- E. 看板模块 ----------

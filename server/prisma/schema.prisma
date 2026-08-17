@@ -45,10 +45,11 @@ model Product {
 
 // 订单
 model Order {
-  id          Int         @id @default(autoincrement())
-  orderNo     String      @unique // 订单号
-  customerId  Int
-  customer    Customer    @relation(fields: [customerId], references: [id])
+  id             Int         @id @default(autoincrement())
+  orderNo        String      @unique // 订单号
+  idempotencyKey String?     @unique // 幂等键：客户端 Idempotency-Key 请求头，防重复提交
+  customerId     Int
+  customer       Customer    @relation(fields: [customerId], references: [id])
   status      String      @default("PENDING")
   // 状态流转：PENDING(待支付) -> PAID(已支付) -> SHIPPED(已发货) -> DONE(已完成)
   //                     \-> CANCELLED(已取消，回补库存)

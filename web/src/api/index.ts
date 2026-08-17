@@ -1,4 +1,4 @@
-// axios 封装：自动携带 token，401 时跳回登录页
+// axios 封装：自动携带 token；401 时跳回登录页（登录接口自身的 401 除外）
 import axios from 'axios';
 import { auth, clearAuth } from '../store/auth';
 
@@ -12,11 +12,15 @@ http.interceptors.request.use((config) => {
   return config;
 });
 
-// 响应拦截：登录过期统一处理
+// 响应拦截：
+//  - 401：仅当「非登录接口」时才视为会话过期 → 清登录态并跳转。
+//    登录接口自身的 401（密码错误）必须让业务代码拿到，才能正常弹出错误提示，
+//    否则会触发整页刷新、提示被冲掉（P1 缺陷修复）。
 http.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const isAuthRequest = String(err.config?.url || '').startsWith('/auth/');
+    if (err.response?.status === 401 && !isAuthRequest) {
       clearAuth();
       window.location.href = '/login';
     }

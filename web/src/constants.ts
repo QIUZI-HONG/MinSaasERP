@@ -7,11 +7,11 @@ export const ORDER_STATUS: Record<string, { label: string; type: 'primary' | 'su
   CANCELLED: { label: '已取消', type: 'info' },
 };
 
-// 允许的状态流转（供前端展示按钮/下拉时使用）
+// 允许的状态流转（与后端 STATUS_FLOW 保持一致，禁止跳级）
 export const STATUS_FLOW: Record<string, string[]> = {
   PENDING: ['PAID', 'CANCELLED'],
   PAID: ['SHIPPED', 'CANCELLED'],
   SHIPPED: ['DONE'],
   DONE: [],
-  CANCELLED: ['PENDING'],
+  CANCELLED: [],
 };

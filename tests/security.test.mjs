@@ -94,23 +94,29 @@ await test('S3-3 token 类型异常（数字）', async () => {
   assertStatus(r.status, 401, '数字 token');
 });
 
-{
-  let blocked = false;
+await test('S3-4 暴力破解防护：连续 5 次失败后锁定（P3 缺陷修复）', async () => {
+  // 用专用测试账号，避免锁定 admin 影响其他用例
+  const bruteUser = 'brute_' + Date.now();
+  await req('POST', '/auth/register', { username: bruteUser, password: 'pass1234' });
+  let lastStatus = 0;
   for (let i = 0; i < 6; i++) {
-    const r = await req('POST', '/auth/login', { username: 'admin', password: 'brute_' + i });
-    if (r.status !== 401) { blocked = true; break; }
+    const r = await req('POST', '/auth/login', { username: bruteUser, password: 'brute_' + i });
+    lastStatus = r.status;
   }
-  observe(`S3-4 暴力破解防护：连续 6 次错误密码${blocked ? '被限流/锁定（有防护）' : '全部仅返回 401，无锁定/限流（⚠️ 建议加登录失败限流与锁定）'}`);
-}
+  assertStatus(lastStatus, 429, '第 6 次失败应触发限流锁定');
+  // 锁定后即使密码正确也被拒
+  const locked = await req('POST', '/auth/login', { username: bruteUser, password: 'pass1234' });
+  assertStatus(locked.status, 429, '锁定期内正确密码也应被拒');
+});
 
 console.log('\n===== S4. 信息泄露 =====');
 
-await test('S4-1 服务器内部错误不泄露堆栈', async () => {
+await test('S4-1 错误响应不泄露堆栈（P2 修复后：删除不存在返回 404）', async () => {
   const r = await req('DELETE', '/products/99999', undefined, authHeaders());
-  assertStatus(r.status, 500, '触发内部错误');
+  assertStatus(r.status, 404, '删除不存在应 404 而非 500');
   const body = r.raw;
   assert(!body.includes('at ') && !body.includes('node_modules') && !body.includes('RequestHandler'), '响应不应含堆栈信息');
-  assert(r.data.message && !String(r.data.message).includes('Prisma'), '错误消息不应泄露内部细节');
+  assert(r.data.message === '商品不存在', '404 应返回友好消息');
 });
 
 await test('S4-2 登录失败响应不泄露用户是否存在', async () => {
@@ -119,15 +125,16 @@ await test('S4-2 登录失败响应不泄露用户是否存在', async () => {
   assert(a.data.message === b.data.message, '两种失败应返回相同提示（防用户名枚举）');
 });
 
-await test('S4-3 响应头：X-Powered-By', async () => {
+await test('S4-3 响应头：不暴露 X-Powered-By（P3 缺陷修复）', async () => {
   const res = await fetch(BASE + '/health');
-  observe(`S4-3 响应头 X-Powered-By: ${res.headers.get('x-powered-by') || '（无，已移除或未暴露）'}${res.headers.get('x-powered-by') ? '（⚠️ 暴露技术栈信息，建议 app.disable("x-powered-by")）' : ''}`);
+  assert(res.headers.get('x-powered-by') === null, '不应返回 X-Powered-By 头');
 });
 
-await test('S4-4 CORS 配置检查', async () => {
-  const res = await fetch(BASE + '/health', { headers: { Origin: 'https://evil.example.com' } });
-  const acao = res.headers.get('access-control-allow-origin');
-  observe(`S4-4 CORS Access-Control-Allow-Origin: ${acao}${acao === '*' ? '（⚠️ 全开放，生产环境应收敛为白名单）' : ''}`);
+await test('S4-4 CORS 白名单：非白名单来源不返回 CORS 头（P3 缺陷修复）', async () => {
+  const evil = await fetch(BASE + '/health', { headers: { Origin: 'https://evil.example.com' } });
+  assert(evil.headers.get('access-control-allow-origin') === null, '恶意来源不应获得 ACAO 头');
+  const allowed = await fetch(BASE + '/health', { headers: { Origin: 'http://localhost:5173' } });
+  assert(allowed.headers.get('access-control-allow-origin') === 'http://localhost:5173', '白名单来源应获得 ACAO 头');
 });
 
 console.log('\n===== S5. 请求健壮性 =====');
@@ -141,25 +148,25 @@ await test('S5-1 请求体为 JSON 数组', async () => {
   assert([400, 401].includes(res.status), `期望 400/401，实际 ${res.status}`);
 });
 
-await test('S5-2 请求体为 null / 空', async () => {
+await test('S5-2 请求体为 null / 空：返回 400（P2 缺陷修复）', async () => {
   const r = await req('POST', '/auth/login', null);
-  assert([400, 401].includes(r.status), `期望 400/401，实际 ${r.status}`);
+  assertStatus(r.status, 400, 'null body 应 400 而非 500');
 });
 
-await test('S5-3 字段类型异常：price 为字符串 abc', async () => {
+await test('S5-3 字段类型异常：price 为字符串 abc 返回 400（P2 缺陷修复）', async () => {
   const r = await req('POST', '/products', { sku: 'BAD-TYPE-1', name: 'x', price: 'abc' }, authHeaders());
-  observe(`S5-3 price="abc"：返回 ${r.status}${r.status === 200 ? `（⚠️ 字符串价格被接受，实际存入 ${r.data?.price}——NaN 风险）` : ''}`);
+  assertStatus(r.status, 400, '非数字价格应 400');
 });
 
-await test('S5-4 字段类型异常：quantity 为布尔 true', async () => {
+await test('S5-4 字段类型异常：quantity 为布尔 true 返回 400（P3 缺陷修复）', async () => {
   const r = await req('POST', '/orders', { customerId: 4, items: [{ productId: 6, quantity: true }] }, authHeaders());
-  observe(`S5-4 quantity=true：返回 ${r.status}${r.status === 200 ? '（⚠️ 布尔被 Number() 转为 1，宽松校验）' : ''}`);
+  assertStatus(r.status, 400, '布尔数量应 400（严格类型校验）');
 });
 
-await test('S5-5 超大请求体（>100KB 默认限制）', async () => {
+await test('S5-5 超大请求体（>100KB）返回 413（P2 缺陷修复）', async () => {
   const big = { username: 'admin', password: 'x'.repeat(200 * 1024) };
   const r = await req('POST', '/auth/login', big);
-  observe(`S5-5 200KB 请求体：返回 ${r.status}${r.status === 413 ? '（正确触发 413 Payload Too Large）' : r.status === 400 || r.status === 401 ? '（被解析但超大密码未超限校验——建议加长度限制）' : '（⚠️ 意外状态 ' + r.status + '）'}`);
+  assertStatus(r.status, 413, '超大请求体应 413');
 });
 
 await test('S5-6 不支持的方法', async () => {

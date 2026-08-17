@@ -75,23 +75,18 @@ await test('U2 登录页正常渲染', async () => {
   await shot('U2-登录页');
 });
 
-await test('U3 错误密码登录：预期弹出错误提示', async () => {
+await test('U3 错误密码登录：显示错误提示且不跳转（P1 缺陷修复）', async () => {
   await page.fill('input[placeholder="用户名"]', 'admin');
   await page.fill('input[placeholder="密码"]', 'wrong-pass');
   await page.click('button:has-text("登 录")');
-  try {
-    await page.waitForSelector('.el-message--error', { timeout: 4000 });
-    const msg = await page.locator('.el-message--error').textContent();
-    if (!msg.includes('用户名或密码错误')) throw new Error('错误提示异常: ' + msg);
-    if (!page.url().includes('/login')) throw new Error('登录失败不应跳转');
-    await shot('U3-登录失败提示');
-  } catch (e) {
-    // 已知缺陷：axios 拦截器把登录接口 401 当会话过期处理，触发整页刷新，错误提示被冲掉
-    if (e.message.includes('Timeout')) {
-      throw new Error('⚠️ 产品缺陷：登录失败时错误提示未显示（axios 401 拦截器误触发整页刷新）');
-    }
-    throw e;
-  }
+  await page.waitForSelector('.el-message--error', { timeout: 5000 });
+  const msg = await page.locator('.el-message--error').textContent();
+  if (!msg.includes('用户名或密码错误')) throw new Error('错误提示异常: ' + msg);
+  if (!page.url().includes('/login')) throw new Error('登录失败不应跳转');
+  // 关键：不应发生整页刷新（axios 401 拦截器已排除登录接口）
+  const navCount = await page.evaluate(() => performance.getEntriesByType('navigation').length);
+  if (navCount > 1) throw new Error('⚠️ 登录失败触发了页面刷新');
+  await shot('U3-登录失败提示');
 });
 
 await test('U4 正确登录：跳转看板并渲染统计卡片', async () => {
@@ -129,13 +124,14 @@ await test('U6 商品列表渲染（≥6 条种子数据）', async () => {
 });
 
 await test('U7 XSS 存储防护：商品名中的 <script> 渲染为文本而非执行', async () => {
-  // 安全套件已注入 XSS 商品，此处验证前端渲染
+  // 安全套件已注入 XSS 商品，此处先按 SKU 前缀搜索定位（避免依赖列表顺序）
   await page.fill('input[placeholder="搜索商品名 / SKU"]', 'XSS-');
+  await page.keyboard.press('Enter');
   await page.waitForTimeout(600);
   await page.waitForSelector('.el-table__row', { timeout: 5000 });
   const cellText = await page.locator('.el-table__row').first().locator('td').allTextContents();
   const hasScript = cellText.some((t) => t.includes('<script>'));
-  if (!hasScript) throw new Error('未找到 XSS 测试商品行');
+  if (!hasScript) throw new Error('未找到 XSS 测试商品行（请先运行 security.test.mjs）');
   // 关键断言：script 未被执行（window.__xss 未被设置）
   const executed = await page.evaluate(() => window.__xss);
   if (executed === 1) throw new Error('⚠️ XSS 已执行！存储型 XSS 漏洞');

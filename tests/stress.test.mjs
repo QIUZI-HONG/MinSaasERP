@@ -19,6 +19,7 @@ async function req(method, path, body, hdrs = {}) {
   return { status: res.status, data };
 }
 function assert(cond, msg) { if (!cond) throw new Error(msg); }
+function assertStatus(actual, expected, ctx) { assert(actual === expected, `${ctx}: 期望 ${expected}，实际 ${actual}`); }
 
 let token = '';
 const authHeaders = () => ({ Authorization: `Bearer ${token}` });
@@ -98,29 +99,32 @@ await test('下单-取消循环 5 轮后库存精确回补', async () => {
 // ---------- 幂等性 ----------
 console.log('\n===== 并发 4. 幂等性检查 =====');
 
-await test('重复提交同一订单请求（双击场景模拟）', async () => {
+await test('重复提交（带幂等键）：相同 Idempotency-Key 只创建一单（P3 缺陷修复）', async () => {
   const sku = 'IDEM-' + Date.now();
   await req('POST', '/products', { sku, name: '幂等商品', price: 1, stock: 10 }, authHeaders());
   const products = (await req('GET', `/products?q=${sku}`, undefined, authHeaders())).data;
   const pid = products[0].id;
 
   const payload = { customerId: 4, items: [{ productId: pid, quantity: 1 }] };
-  // 完全相同的请求立即连发两次（模拟 UI 双击 / 重试）
+  const key = 'stress-key-' + Date.now();
+  // 完全相同的请求连发两次，携带同一幂等键（模拟 UI 双击 / 重试）
   const [r1, r2] = await Promise.all([
-    req('POST', '/orders', payload, authHeaders()),
-    req('POST', '/orders', payload, authHeaders()),
+    req('POST', '/orders', payload, { ...authHeaders(), 'Idempotency-Key': key }),
+    req('POST', '/orders', payload, { ...authHeaders(), 'Idempotency-Key': key }),
   ]);
-  observe(`幂等性：相同请求连发两次 → 第一次 ${r1.status}，第二次 ${r2.status}${r2.status === 200 ? '（⚠️ 无幂等键，重复提交会创建两单——UI 层依赖按钮 loading 防重，API 层无防重）' : ''}`);
+  assert(r1.status === 200 && r2.status === 200, '两次都应 200');
+  assert(r1.data.id === r2.data.id, '应返回同一订单');
+  const after = (await req('GET', `/products?q=${sku}`, undefined, authHeaders())).data[0];
+  assert(after.stock === 9, `库存应只扣 1 次（10→9），实际 ${after.stock}`);
 });
 
 // ---------- 边界健壮性 ----------
 console.log('\n===== 并发 5. 边界数据 =====');
 
-await test('超长商品名（2000 字符）不导致 500', async () => {
+await test('超长商品名（2000 字符）被拒绝（P3 缺陷修复）', async () => {
   const longName = '长'.repeat(2000);
   const r = await req('POST', '/products', { sku: 'LONG-' + Date.now(), name: longName, price: 1 }, authHeaders());
-  observe(`超长名称 2000 字符：返回 ${r.status}${r.status === 200 ? '（被接受入库——建议加长度上限约束）' : r.status === 400 ? '（合理拒绝）' : '（⚠️ ' + r.status + '）'}`);
-  assert(r.status !== 500, '不应 500');
+  assertStatus(r.status, 400, '超长名称应 400');
 });
 
 await test('极端数值：价格 99999999.99 与数量 1000000', async () => {

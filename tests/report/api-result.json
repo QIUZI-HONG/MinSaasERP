@@ -1,112 +1,114 @@
 {
   "suite": "API 层",
-  "total": 48,
-  "passed": 48,
+  "total": 56,
+  "passed": 56,
   "failed": 0,
-  "observations": [
-    "A6 用户名带空格未 trim：返回 401（拒绝，符合预期）",
-    "A10 超长用户名(1000字符)：返回 200（数据库无长度限制，注册成功——建议加长度校验）",
-    "B9 价格为 0：返回 200（价格为 0 被接受——建议业务上禁止 0 元/负价商品）",
-    "B10 价格为负：返回 200（负价格被接受——⚠️ 严重缺陷：可创建负价商品导致订单金额异常）",
-    "B16 删除不存在的商品 id=99999：返回 500（⚠️ 应为 404，实际为 500——资源不存在未区分）",
-    "C6 删除不存在的客户 id=99999：返回 500（⚠️ 应为 404，实际为 500）",
-    "D13 状态跳级 PENDING→DONE：返回 200（⚠️ 后端未校验状态机流转顺序，可跳级——建议补状态机校验）"
-  ],
+  "observations": [],
   "cases": [
     {
       "name": "A1 登录成功：正确账号密码",
       "pass": true,
-      "ms": 127
+      "ms": 101
     },
     {
       "name": "A2 登录失败：密码错误",
       "pass": true,
-      "ms": 58
+      "ms": 59
     },
     {
       "name": "A3 登录失败：用户不存在",
       "pass": true,
-      "ms": 20
+      "ms": 6
     },
     {
       "name": "A4 登录失败：空用户名",
       "pass": true,
-      "ms": 13
+      "ms": 17
     },
     {
       "name": "A5 登录失败：空密码",
       "pass": true,
-      "ms": 15
+      "ms": 12
+    },
+    {
+      "name": "A6 用户名带空格：trim 后正常登录（已修复）",
+      "pass": true,
+      "ms": 62
     },
     {
       "name": "A7 注册成功",
       "pass": true,
-      "ms": 79
+      "ms": 72
     },
     {
       "name": "A8 注册失败：重复用户名",
       "pass": true,
-      "ms": 11
+      "ms": 4
     },
     {
       "name": "A9 注册失败：空密码",
       "pass": true,
-      "ms": 1
+      "ms": 15
     },
     {
-      "name": "A11 未带 token 访问受保护接口",
-      "pass": true,
-      "ms": 10
-    },
-    {
-      "name": "A12 非法 token（乱字符串）",
-      "pass": true,
-      "ms": 17
-    },
-    {
-      "name": "A13 篡改 token 载荷（改 role 不重签）",
-      "pass": true,
-      "ms": 21
-    },
-    {
-      "name": "A14 错误 secret 签发的 token",
-      "pass": true,
-      "ms": 11
-    },
-    {
-      "name": "A15 过期 token",
-      "pass": true,
-      "ms": 16
-    },
-    {
-      "name": "B1 商品列表正常",
-      "pass": true,
-      "ms": 14
-    },
-    {
-      "name": "B2 搜索命中（q=键盘）",
+      "name": "A10 超长用户名（1000 字符）被拒绝",
       "pass": true,
       "ms": 13
     },
     {
+      "name": "A11 未带 token 访问受保护接口",
+      "pass": true,
+      "ms": 11
+    },
+    {
+      "name": "A12 非法 token（乱字符串）",
+      "pass": true,
+      "ms": 12
+    },
+    {
+      "name": "A13 篡改 token 载荷（改 role 不重签）",
+      "pass": true,
+      "ms": 17
+    },
+    {
+      "name": "A14 错误 secret 签发的 token",
+      "pass": true,
+      "ms": 13
+    },
+    {
+      "name": "A15 过期 token",
+      "pass": true,
+      "ms": 3
+    },
+    {
+      "name": "B1 商品列表正常",
+      "pass": true,
+      "ms": 10
+    },
+    {
+      "name": "B2 搜索命中（q=键盘）",
+      "pass": true,
+      "ms": 3
+    },
+    {
       "name": "B3 搜索无结果（q=不存在的商品xyz）",
       "pass": true,
-      "ms": 15
+      "ms": 13
     },
     {
       "name": "B4 搜索特殊字符（q=% 通配符注入）",
       "pass": true,
-      "ms": 2
+      "ms": 17
     },
     {
       "name": "B5 新增商品成功",
       "pass": true,
-      "ms": 23
+      "ms": 7
     },
     {
       "name": "B6 新增失败：缺 SKU",
       "pass": true,
-      "ms": 2
+      "ms": 4
     },
     {
       "name": "B7 新增失败：缺名称",
@@ -116,67 +118,87 @@
     {
       "name": "B8 新增失败：缺价格",
       "pass": true,
-      "ms": 12
+      "ms": 13
+    },
+    {
+      "name": "B9 价格为 0 被拒绝（业务校验）",
+      "pass": true,
+      "ms": 1
+    },
+    {
+      "name": "B10 价格为负被拒绝（P1 缺陷修复）",
+      "pass": true,
+      "ms": 14
     },
     {
       "name": "B11 新增失败：SKU 重复",
       "pass": true,
-      "ms": 30
+      "ms": 17
     },
     {
       "name": "B12 修改商品成功",
       "pass": true,
-      "ms": 34
+      "ms": 36
     },
     {
       "name": "B13 修改失败：SKU 改为已存在",
       "pass": true,
-      "ms": 10
+      "ms": 11
     },
     {
       "name": "B14 删除未引用商品成功",
       "pass": true,
-      "ms": 17
+      "ms": 33
     },
     {
       "name": "B15 删除失败：被订单引用（外键保护）",
       "pass": true,
-      "ms": 10
+      "ms": 9
+    },
+    {
+      "name": "B16 删除不存在的商品返回 404（P2 缺陷修复）",
+      "pass": true,
+      "ms": 14
     },
     {
       "name": "C1 客户列表正常",
       "pass": true,
-      "ms": 17
+      "ms": 16
     },
     {
       "name": "C2 新增客户成功",
       "pass": true,
-      "ms": 23
+      "ms": 20
     },
     {
       "name": "C3 新增失败：缺名称",
       "pass": true,
-      "ms": 4
+      "ms": 7
     },
     {
       "name": "C4 修改客户成功",
       "pass": true,
-      "ms": 22
+      "ms": 31
     },
     {
       "name": "C5 删除失败：客户有订单（外键保护）",
       "pass": true,
-      "ms": 8
+      "ms": 10
+    },
+    {
+      "name": "C6 删除不存在的客户返回 404（P2 缺陷修复）",
+      "pass": true,
+      "ms": 17
     },
     {
       "name": "D1 订单列表正常（含客户和明细）",
       "pass": true,
-      "ms": 15
+      "ms": 14
     },
     {
       "name": "D2 创建订单成功并扣减库存",
       "pass": true,
-      "ms": 53
+      "ms": 37
     },
     {
       "name": "D3 下单失败：缺客户",
@@ -186,22 +208,22 @@
     {
       "name": "D4 下单失败：空明细",
       "pass": true,
-      "ms": 13
+      "ms": 15
     },
     {
       "name": "D5 下单失败：商品不存在",
       "pass": true,
-      "ms": 13
+      "ms": 16
     },
     {
       "name": "D6 下单失败：数量为 0",
       "pass": true,
-      "ms": 17
+      "ms": 16
     },
     {
       "name": "D7 下单失败：数量为负",
       "pass": true,
-      "ms": 16
+      "ms": 13
     },
     {
       "name": "D8 下单失败：数量为小数",
@@ -211,32 +233,42 @@
     {
       "name": "D9 下单失败：库存不足",
       "pass": true,
-      "ms": 12
+      "ms": 15
     },
     {
       "name": "D10 金额可信性：客户端伪造金额不生效",
       "pass": true,
-      "ms": 56
+      "ms": 44
     },
     {
       "name": "D11 状态流转：PENDING→PAID→SHIPPED→DONE",
       "pass": true,
-      "ms": 66
+      "ms": 67
     },
     {
       "name": "D12 非法状态值",
       "pass": true,
-      "ms": 24
+      "ms": 20
+    },
+    {
+      "name": "D13 状态跳级被拒绝（状态机校验，P3 缺陷修复）",
+      "pass": true,
+      "ms": 26
     },
     {
       "name": "D14 取消订单回补库存（一致性）",
       "pass": true,
-      "ms": 64
+      "ms": 71
     },
     {
-      "name": "D15 重复取消不重复回补库存",
+      "name": "D15 已取消订单不允许再次流转（状态机拦截）",
       "pass": true,
-      "ms": 72
+      "ms": 89
+    },
+    {
+      "name": "D16 幂等键：相同 Idempotency-Key 并发请求只创建一单（P3 缺陷修复）",
+      "pass": true,
+      "ms": 56
     },
     {
       "name": "E1 看板统计字段齐全",
@@ -246,12 +278,12 @@
     {
       "name": "E2 统计口径：取消订单不计入营收",
       "pass": true,
-      "ms": 104
+      "ms": 83
     },
     {
       "name": "E3 订单金额一致性：明细之和 == totalAmount",
       "pass": true,
-      "ms": 2
+      "ms": 17
     }
   ]
 }
