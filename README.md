@@ -7,7 +7,15 @@
 ![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF)
 
 > 多租户风格的迷你 SaaS 进销存（ERP）系统：登录鉴权、商品、客户、订单（事务扣库存）、数据看板。
-> 技术栈与"AI 全栈工程师（SaaS 方向）"岗位完全对齐：**Node.js + TypeScript + Express + Prisma + SQL** 后端 × **Vue 3 + TypeScript + Vite** 前端。
+> 技术栈与"AI 全栈工程师（SaaS 方向）"岗位完全对齐：**Node.js + TypeScript + Express + Prisma + MySQL** 后端 × **Vue 3 + TypeScript + Vite** 前端。
+
+## 🖥 在线演示
+
+> 🔗 **演示地址：https://shall-knights-bug-mumbai.trycloudflare.com**
+>
+> 账号：`admin`　密码：`admin123`
+>
+> ⚠️ 该地址为本地服务内网穿透（Cloudflare Tunnel）生成的临时链接，**电脑关机或隧道重启后地址会变化**；若无法访问请提示维护者刷新隧道。
 
 ## ✨ 核心特性
 
@@ -19,14 +27,14 @@
 
 ## 🛠 技术栈
 
-| 层   | 技术                                                                        |
-| ---- | --------------------------------------------------------------------------- |
-| 后端 | Node.js + TypeScript + Express + Prisma ORM + MySQL |
-| 前端 | Vue 3 + TypeScript + Vite + Element Plus + Vue Router + Axios               |
-| 鉴权 | JWT（jsonwebtoken）+ bcryptjs                                               |
-| 安全 | helmet 安全头 + CORS 白名单 + 入参校验                                      |
-| 质量 | ESLint + Prettier + TypeScript strict + GitHub Actions CI                   |
-| 部署 | Docker / docker-compose（Nginx 托管前端 + API 反代）                        |
+| 层   | 技术                                                          |
+| ---- | ------------------------------------------------------------- |
+| 后端 | Node.js + TypeScript + Express + Prisma ORM + MySQL           |
+| 前端 | Vue 3 + TypeScript + Vite + Element Plus + Vue Router + Axios |
+| 鉴权 | JWT（jsonwebtoken）+ bcryptjs                                 |
+| 安全 | helmet 安全头 + CORS 白名单 + 入参校验                        |
+| 质量 | ESLint + Prettier + TypeScript strict + GitHub Actions CI     |
+| 部署 | Docker / docker-compose（Nginx 托管前端 + API 反代）          |
 
 ## 🏗 架构
 
@@ -112,7 +120,7 @@ docker compose up --build
 | ------------------- | ----------- | ---------------------------------------- |
 | `PORT`              | server/.env | API 端口，默认 3000                      |
 | `JWT_SECRET`        | server/.env | JWT 签名密钥，**生产必须替换为强随机串** |
-| `DATABASE_URL`      | server/.env | MySQL 连接串（本地或云数据库）        |
+| `DATABASE_URL`      | server/.env | MySQL 连接串（本地或云数据库）           |
 | `CORS_ORIGINS`      | server/.env | CORS 白名单（逗号分隔）                  |
 | `VITE_API_BASE_URL` | web/.env    | 前端 API 地址（留空走 Vite 代理）        |
 
