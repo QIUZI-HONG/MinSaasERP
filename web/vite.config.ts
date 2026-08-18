@@ -5,6 +5,10 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: Number(process.env.VITE_PORT) || 5173,
+    // 允许非 localhost 的 Host 访问（内网穿透/局域网演示需要；生产使用构建产物不受影响）
+    host: true,
+    // 关闭 DNS rebinding 防护的 host 白名单（开发/穿透场景；生产构建不受影响）
+    allowedHosts: true,
     // 开发环境下把 /api 请求代理到后端，避免跨域
     proxy: {
       '/api': {
