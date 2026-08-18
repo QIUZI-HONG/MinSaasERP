@@ -36,6 +36,25 @@ jobs:
   api-tests:
     name: API / Security / Concurrency tests
     runs-on: ubuntu-latest
+    services:
+      # MySQL 测试实例（生产同样使用 MySQL）
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_DATABASE: minierp
+          MYSQL_USER: minierp
+          MYSQL_PASSWORD: minierp123
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -utest -ptest"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # 覆盖 server/.env（dotenv 不覆盖已存在的环境变量）
+      DATABASE_URL: mysql://minierp:minierp123@localhost:3306/minierp
     steps:
       - uses: actions/checkout@v4
 

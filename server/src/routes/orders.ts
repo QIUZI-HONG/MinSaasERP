@@ -70,17 +70,21 @@ router.post('/', async (req, res, next) => {
         const qty = toInt(it?.quantity, 'quantity', { min: 1, max: 1000000 });
         const product = await tx.product.findUnique({ where: { id: productId } });
         if (!product) throw new HttpError(400, `商品不存在：${productId}`);
-        if (product.stock < qty) {
+
+        // 原子扣减库存（防并发超卖）：
+        // UPDATE ... SET stock = stock - qty WHERE id = ? AND stock >= qty
+        // 利用行级锁，并发下只有一个事务扣减成功，其余 affected=0 走库存不足分支
+        const updated = await tx.product.updateMany({
+          where: { id: product.id, stock: { gte: qty } },
+          data: { stock: { decrement: qty } },
+        });
+        if (updated.count === 0) {
           throw new HttpError(400, `「${product.name}」库存不足（剩余 ${product.stock}）`);
         }
+
         // 单价取商品当前价格快照，忽略客户端传入值（防篡改）
         total += product.price * qty;
         orderItems.push({ productId: product.id, quantity: qty, unitPrice: product.price });
-        // 扣减库存
-        await tx.product.update({
-          where: { id: product.id },
-          data: { stock: { decrement: qty } },
-        });
       }
 
       // 订单号：时间戳 + 随机串，避免 Date.now() 高并发撞号

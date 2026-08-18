@@ -21,7 +21,7 @@
 
 | 层   | 技术                                                                        |
 | ---- | --------------------------------------------------------------------------- |
-| 后端 | Node.js + TypeScript + Express + Prisma ORM + SQLite（生产可换 PostgreSQL） |
+| 后端 | Node.js + TypeScript + Express + Prisma ORM + MySQL |
 | 前端 | Vue 3 + TypeScript + Vite + Element Plus + Vue Router + Axios               |
 | 鉴权 | JWT（jsonwebtoken）+ bcryptjs                                               |
 | 安全 | helmet 安全头 + CORS 白名单 + 入参校验                                      |
@@ -40,7 +40,7 @@ graph LR
         Backend[Express API :3000] --> Auth[鉴权中间件 JWT]
         Backend --> Routes[业务路由]
         Routes --> Prisma[Prisma ORM]
-        Prisma --> DB[(SQLite)]
+        Prisma --> DB[(MySQL)]
     end
     Tests[四层测试套件] --> Backend
     Tests --> Browser
@@ -112,7 +112,7 @@ docker compose up --build
 | ------------------- | ----------- | ---------------------------------------- |
 | `PORT`              | server/.env | API 端口，默认 3000                      |
 | `JWT_SECRET`        | server/.env | JWT 签名密钥，**生产必须替换为强随机串** |
-| `DATABASE_URL`      | server/.env | SQLite 连接串（生产可切换 PostgreSQL）   |
+| `DATABASE_URL`      | server/.env | MySQL 连接串（本地或云数据库）        |
 | `CORS_ORIGINS`      | server/.env | CORS 白名单（逗号分隔）                  |
 | `VITE_API_BASE_URL` | web/.env    | 前端 API 地址（留空走 Vite 代理）        |
 
