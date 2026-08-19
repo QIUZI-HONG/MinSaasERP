@@ -11,7 +11,7 @@
 
 ## 🖥 在线演示
 
-> 🔗 **演示地址：https://shall-knights-bug-mumbai.trycloudflare.com**
+> 🔗 **演示地址：https://diana-lessons-gsm-smoke.trycloudflare.com**
 >
 > 账号：`admin`　密码：`admin123`
 >
