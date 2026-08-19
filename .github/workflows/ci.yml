@@ -21,6 +21,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma client
+        working-directory: server
+        run: npx prisma generate
+
       - name: Lint
         run: npm run lint
 
@@ -85,12 +89,15 @@ jobs:
           echo "Backend failed to start" && exit 1
 
       - name: Run API tests
+        working-directory: tests
         run: node api.test.mjs
 
       - name: Run security tests
+        working-directory: tests
         run: node security.test.mjs
 
       - name: Run concurrency tests
+        working-directory: tests
         run: node stress.test.mjs
 
       - name: Reset database
