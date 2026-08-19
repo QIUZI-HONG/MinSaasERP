@@ -543,6 +543,7 @@ await test('E3 订单金额一致性：明细之和 == totalAmount', async () =>
 const result = summary('API 层');
 results.push(result);
 
-// 输出 JSON 供汇总脚本使用
+// 输出 JSON 供汇总脚本使用（确保 report 目录存在，兼容 CI 全新环境）
+fs.mkdirSync(new URL('./report/', import.meta.url), { recursive: true });
 fs.writeFileSync(new URL('./report/api-result.json', import.meta.url), JSON.stringify(result, null, 2));
 console.log('API 测试结果已写入 report/api-result.json');

@@ -211,26 +211,31 @@ await test('S5-7 路径遍历', async () => {
 console.log('\n===== S6. 密码存储审计（直查数据库） =====');
 
 await test('S6-1 密码以 bcrypt 哈希存储，非明文', async () => {
-  // 用 Node 内置 sqlite 直查数据库（不经 API，审计真实存储）
-  const { DatabaseSync } = await import('node:sqlite');
-  const db = new DatabaseSync('D:/Test03/server/prisma/dev.db');
-  const row = db.prepare('SELECT username, passwordHash FROM User WHERE username = ?').get('admin');
-  db.close();
-  assert(row, 'admin 用户应存在');
-  assert(
-    String(row.passwordHash).startsWith('$2'),
-    `应为 bcrypt 格式($2...)，实际前缀 ${String(row.passwordHash).slice(0, 4)}`
-  );
-  assert(!String(row.passwordHash).includes('admin123'), '哈希不应包含明文');
-  // 复用 server 目录下的 bcryptjs 验证哈希可校验
+  // 直查数据库（MySQL）审计真实存储：通过 server 的 Prisma 客户端
   const { createRequire } = await import('node:module');
   const require = createRequire('D:/Test03/server/package.json');
+  const dotenv = require('dotenv');
+  dotenv.config({ path: 'D:/Test03/server/.env' });
+  const { PrismaClient } = require('@prisma/client');
   const bcrypt = require('bcryptjs');
-  assert(await bcrypt.compare('admin123', String(row.passwordHash)), '哈希应可通过 bcrypt 校验');
+  const prisma = new PrismaClient();
+  try {
+    const user = await prisma.user.findUnique({ where: { username: 'admin' } });
+    assert(user, 'admin 用户应存在');
+    assert(
+      String(user.passwordHash).startsWith('$2'),
+      `应为 bcrypt 格式($2...)，实际前缀 ${String(user.passwordHash).slice(0, 4)}`
+    );
+    assert(!String(user.passwordHash).includes('admin123'), '哈希不应包含明文');
+    assert(await bcrypt.compare('admin123', String(user.passwordHash)), '哈希应可通过 bcrypt 校验');
+  } finally {
+    await prisma.$disconnect();
+  }
 });
 
 // ---------- 汇总 ----------
 const result = summary('安全专项');
 results.push(result);
+fs.mkdirSync(new URL('./report/', import.meta.url), { recursive: true });
 fs.writeFileSync(new URL('./report/security-result.json', import.meta.url), JSON.stringify(result, null, 2));
 console.log('安全测试结果已写入 report/security-result.json');

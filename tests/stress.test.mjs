@@ -177,5 +177,6 @@ await test('极端数值：价格 99999999.99 与数量 1000000', async () => {
 // ---------- 汇总 ----------
 const result = summary('并发与健壮性');
 results.push(result);
+fs.mkdirSync(new URL('./report/', import.meta.url), { recursive: true });
 fs.writeFileSync(new URL('./report/stress-result.json', import.meta.url), JSON.stringify(result, null, 2));
 console.log('并发测试结果已写入 report/stress-result.json');

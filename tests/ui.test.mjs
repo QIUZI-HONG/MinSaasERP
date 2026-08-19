@@ -364,6 +364,7 @@ await test('U21 控制台无未预期 JS 错误（整轮 E2E）', async () => {
 
 // ---------- 汇总 ----------
 const result = summary('UI E2E（Chrome）');
+fs.mkdirSync(new URL('./report/', import.meta.url), { recursive: true });
 fs.writeFileSync(new URL('./report/ui-result.json', import.meta.url), JSON.stringify(result, null, 2));
 console.log('UI 测试结果已写入 report/ui-result.json');
 
